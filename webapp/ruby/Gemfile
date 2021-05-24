@@ -1,0 +1,11 @@
+source 'https://rubygems.org'
+
+gem 'mysql2'
+gem 'mysql2-cs-bind'
+gem 'puma', require: false
+gem 'sinatra', require: 'sinatra/base'
+gem 'ulid'
+
+group :development do
+  gem 'sinatra-contrib'
+end
