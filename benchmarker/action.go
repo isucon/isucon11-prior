@@ -213,13 +213,21 @@ func ActionCreateSchedule(ctx context.Context, step *isucandar.BenchmarkStep, s 
 	if err := assertJSONBody(res, jsonResp); err != nil {
 		step.AddError(err)
 		hasError = true
+	} else {
+		if err := assertEqualString(jsonResp.Title, schedule.Title); err != nil {
+			step.AddError(err)
+			hasError = true
+		}
+		if err := assertEqualUint(jsonResp.Capacity, schedule.Capacity); err != nil {
+			step.AddError(err)
+			hasError = true
+		}
 	}
 
 	if !hasError {
 		schedule.ID = jsonResp.ID
 		schedule.CreatedAt = jsonResp.CreatedAt
 
-		AdminLogger.Printf("id: %s / created at: %s", schedule.ID, schedule.CreatedAt.Format(time.RFC3339))
 		step.AddScore(ScoreCreateSchedule)
 	}
 	return schedule, nil

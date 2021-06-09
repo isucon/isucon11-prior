@@ -43,3 +43,17 @@ func assertJSONBody(res *http.Response, body interface{}) error {
 	}
 	return nil
 }
+
+func assertEqualString(expected, actual string) error {
+	if expected != actual {
+		return failure.NewError(ErrMissmatch, fmt.Errorf("missmatch: %s != expected %s", actual, expected))
+	}
+	return nil
+}
+
+func assertEqualUint(expected, actual uint) error {
+	if expected != actual {
+		return failure.NewError(ErrMissmatch, fmt.Errorf("missmatch: %d != expected %d", actual, expected))
+	}
+	return nil
+}

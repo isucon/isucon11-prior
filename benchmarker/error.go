@@ -19,4 +19,5 @@ var (
 	ErrInvalidStatusCode  failure.StringCode = "INVALID STATUS CODE"
 	ErrInvalidContentType failure.StringCode = "INVALID CONTENT TYPE"
 	ErrInvalidJSON        failure.StringCode = "INVALID JSON"
+	ErrMissmatch          failure.StringCode = "MISSMATCH"
 )
