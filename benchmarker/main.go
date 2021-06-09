@@ -97,6 +97,11 @@ func sendResult(s *Scenario, result *isucandar.BenchmarkResult, finish bool) boo
 	}
 
 	score := scoreRaw - deduction
+	if passed {
+		reason = "pass"
+	} else {
+		reason = "fail"
+	}
 	ContestantLogger.Printf("score: %d : %s", score, reason)
 
 	return passed
