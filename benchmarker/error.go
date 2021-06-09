@@ -1,6 +1,9 @@
 package main
 
-import "github.com/isucon/isucandar/failure"
+import (
+	"github.com/isucon/isucandar"
+	"github.com/isucon/isucandar/failure"
+)
 
 // Critical Errors
 var (
@@ -8,7 +11,8 @@ var (
 )
 
 func isCritical(err error) bool {
-	return failure.IsCode(err, ErrCritical)
+	// Prepare step でのエラーはすべて Critical の扱い
+	return failure.IsCode(err, isucandar.ErrPrepare) || failure.IsCode(err, ErrCritical)
 }
 
 var (
