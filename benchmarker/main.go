@@ -82,6 +82,10 @@ func sendResult(s *Scenario, result *isucandar.BenchmarkResult, finish bool) boo
 	deduction := int64(0)
 	timeoutCount := int64(0)
 
+	for tag, count := range result.Score.Breakdown() {
+		AdminLogger.Printf("SCORE: %s: %d", tag, count)
+	}
+
 	for _, err := range errors {
 		isCritical, isTimeout, isDeduction := checkError(err)
 
@@ -156,7 +160,9 @@ func main() {
 	s.BaseURL = fmt.Sprintf("%s://%s/", scheme, targetAddress)
 	s.NoLoad = noLoad
 
-	b, err := isucandar.NewBenchmark(isucandar.WithLoadTimeout(70 * time.Second))
+	b, err := isucandar.NewBenchmark(
+	// isucandar.WithLoadTimeout(70 * time.Second),
+	)
 	if err != nil {
 		panic(err)
 	}

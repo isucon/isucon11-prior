@@ -1,19 +1,29 @@
 package main
 
-import "fmt"
+import (
+	"fmt"
+	"math/rand"
+	"sync/atomic"
+)
 
 // ダミーデータの生成方法は最初のうちは凝らない方が楽です
 
-var randomEmailCount int = 0
-
-func randomEmail() string {
-	randomEmailCount++
-	return fmt.Sprintf("isucon-%d@example.com", randomEmailCount)
+// 一定確率で true
+func percentage(numerator int, denominator int) bool {
+	return rand.Intn(denominator) <= numerator
 }
 
-var randomNicknameCount int = 0
+var randomEmailCount int64 = 0
+
+// インクリメントで race したので直す
+func randomEmail() string {
+	cnt := atomic.AddInt64(&randomEmailCount, 1)
+	return fmt.Sprintf("isucon-%d@example.com", cnt)
+}
+
+var randomNicknameCount int64 = 0
 
 func randomNickname() string {
-	randomNicknameCount++
-	return fmt.Sprintf("isucon-%d", randomNicknameCount)
+	cnt := atomic.AddInt64(&randomNicknameCount, 1)
+	return fmt.Sprintf("isucon-%d", cnt)
 }

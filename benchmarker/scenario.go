@@ -79,6 +79,14 @@ func (s *Scenario) Load(parent context.Context, step *isucandar.BenchmarkStep) e
 		TODO: 実際の負荷走行シナリオ
 	*/
 
+	if err := ActionSignups(parent, step, s); err != nil {
+		return err
+	}
+
+	if err := ActionLogins(parent, step, s); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -102,10 +110,6 @@ func (s *Scenario) NewUser() (*User, error) {
 
 	user := newUser()
 	user.Agent = a
-
-	// ここで Add するのが正しいかは要検討
-	// Signup リクエストが終わったら Add したほうがいいかもね
-	s.Users.Add(user)
 
 	return user, nil
 }

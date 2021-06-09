@@ -19,16 +19,21 @@ type User struct {
 	// 1ユーザーごとに Cookie を持つので 1 ユーザーごとに Agent を専有したほうがいい
 	// Agent 1つ と UserAgent (ブラウザ) が1:1になるイメージ
 	Agent *agent.Agent
+
+	FailOnSignup bool
+	FailOnLogin  bool
 }
 
 func newUser() *User {
 	return &User{
-		ID:        "",
-		Email:     randomEmail(),
-		Nickname:  randomNickname(),
-		Staff:     false,
-		CreatedAt: time.Unix(0, 0),
-		Agent:     nil,
+		ID:           "",
+		Email:        randomEmail(),
+		Nickname:     randomNickname(),
+		Staff:        false,
+		CreatedAt:    time.Unix(0, 0),
+		Agent:        nil,
+		FailOnSignup: percentage(1, 100),
+		FailOnLogin:  percentage(1, 20),
 	}
 }
 
@@ -48,6 +53,18 @@ func (a *Users) Add(u *User) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 	a.slice = append(a.slice, u)
+}
+
+func (a *Users) Get(idx int) *User {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	return a.slice[idx]
+}
+
+func (a *Users) Count() int {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	return len(a.slice)
 }
 
 type Schedule struct {
