@@ -19,11 +19,17 @@ type Scenario struct {
 
 	// 競技者の実装言語
 	Language string
+
+	StaffUser *User
+	Users     *Users
 }
 
 func NewScenario() (*Scenario, error) {
 	return &Scenario{
-		// TODO: シナリオを初期化する
+		UseTLS:   false,
+		NoLoad:   false,
+		Language: "",
+		Users:    newUsers(),
 	}, nil
 }
 
@@ -46,8 +52,20 @@ func (s *Scenario) Prepare(ctx context.Context, step *isucandar.BenchmarkStep) e
 		return failure.NewError(ErrCritical, err)
 	}
 
-	// ここで res を検証する
 	assertInitialize(step, res)
+
+	// スケジュール作ったりする管理ユーザー
+	// Agent は initialize で使った奴使いまわしちゃおう
+	s.StaffUser = &User{
+		Email:    "isucon2021_prior@isucon.net",
+		Nickname: "isucon",
+		Staff:    true,
+		Agent:    initializer,
+	}
+
+	if err := ActionLogin(ctx, step, s.StaffUser); err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -74,4 +92,20 @@ func (s *Scenario) Validation(ctx context.Context, step *isucandar.BenchmarkStep
 	*/
 
 	return nil
+}
+
+func (s *Scenario) NewUser() (*User, error) {
+	a, err := agent.NewAgent(agent.WithBaseURL(s.BaseURL))
+	if err != nil {
+		return nil, failure.NewError(ErrCritical, err)
+	}
+
+	user := newUser()
+	user.Agent = a
+
+	// ここで Add するのが正しいかは要検討
+	// Signup リクエストが終わったら Add したほうがいいかもね
+	s.Users.Add(user)
+
+	return user, nil
 }
