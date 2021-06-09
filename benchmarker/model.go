@@ -74,6 +74,45 @@ type Schedule struct {
 	CreatedAt time.Time
 }
 
+func newSchedule() *Schedule {
+	return &Schedule{
+		ID:        "",
+		Title:     randomTitle(),
+		Capacity:  uint(randomCapacity()),
+		CreatedAt: time.Unix(0, 0),
+	}
+}
+
+type Schedules struct {
+	mu    sync.Mutex
+	slice []*Schedule
+}
+
+func newSchedules() *Schedules {
+	return &Schedules{
+		mu:    sync.Mutex{},
+		slice: []*Schedule{},
+	}
+}
+
+func (a *Schedules) Add(u *Schedule) {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	a.slice = append(a.slice, u)
+}
+
+func (a *Schedules) Get(idx int) *Schedule {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	return a.slice[idx]
+}
+
+func (a *Schedules) Count() int {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	return len(a.slice)
+}
+
 type Reservation struct {
 	ID        string
 	Schedule  *Schedule

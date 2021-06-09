@@ -22,14 +22,16 @@ type Scenario struct {
 
 	StaffUser *User
 	Users     *Users
+	Schedules *Schedules
 }
 
 func NewScenario() (*Scenario, error) {
 	return &Scenario{
-		UseTLS:   false,
-		NoLoad:   false,
-		Language: "",
-		Users:    newUsers(),
+		UseTLS:    false,
+		NoLoad:    false,
+		Language:  "",
+		Users:     newUsers(),
+		Schedules: newSchedules(),
 	}, nil
 }
 
@@ -87,6 +89,10 @@ func (s *Scenario) Load(parent context.Context, step *isucandar.BenchmarkStep) e
 		return err
 	}
 
+	if err := ActionCreateSchedules(parent, step, s); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -112,4 +118,8 @@ func (s *Scenario) NewUser() (*User, error) {
 	user.Agent = a
 
 	return user, nil
+}
+
+func (s *Scenario) NewSchedule() (*Schedule, error) {
+	return newSchedule(), nil
 }

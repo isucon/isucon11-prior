@@ -16,5 +16,7 @@ func isCritical(err error) bool {
 }
 
 var (
-	ErrInvalidStatusCode failure.StringCode = "INVALID STATUS CODE"
+	ErrInvalidStatusCode  failure.StringCode = "INVALID STATUS CODE"
+	ErrInvalidContentType failure.StringCode = "INVALID CONTENT TYPE"
+	ErrInvalidJSON        failure.StringCode = "INVALID JSON"
 )

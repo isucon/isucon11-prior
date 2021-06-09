@@ -116,9 +116,9 @@ class App < Sinatra::Base
       capacity = params[:capacity].to_i
 
       tx.xquery('INSERT INTO `schedules` (`id`, `title`, `capacity`, `created_at`) VALUES (?, ?, ?, NOW(6))', id, title, capacity)
-      created_at = tx.xquery('SELECT `created_at` FROM `schedules` WHERE `id` = ?', id)&.first
+      created_at = tx.xquery('SELECT `created_at` FROM `schedules` WHERE `id` = ?', id)&.first[:created_at]
 
-      json({ id: id, title: title, capacity: capacity, createdAt: created_at})
+      json({ id: id, title: title, capacity: capacity, created_at: created_at.iso8601})
     end
   end
 
@@ -145,14 +145,14 @@ class App < Sinatra::Base
       tx.xquery('INSERT INTO `reservations` (`id`, `schedule_id`, `user_id`, `created_at`) VALUES (?, ?, ?, NOW(6))', id, schedule_id, user_id)
       created_at = tx.xquery('SELECT `created_at` FROM `reservations` WHERE `id` = ?', id)&.first
 
-      json({ id: id, scheduleId: schedule_id, userId: user_id, createdAt: created_at})
+      json({ id: id, schedule_id: schedule_id, user_id: user_id, created_at: created_at})
     end
   end
 
   get '/api/schedules' do
-    schedules = db.xquery('SELECT * FROM `schedules`');
+    schedules = db.xquery('SELECT * FROM `schedules` ORDER BY `id` ASC');
 
-    json(schedules)
+    json(schedules.to_a)
   end
 
   get '/api/schedules/:id' do

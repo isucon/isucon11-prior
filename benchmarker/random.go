@@ -27,3 +27,14 @@ func randomNickname() string {
 	cnt := atomic.AddInt64(&randomNicknameCount, 1)
 	return fmt.Sprintf("isucon-%d", cnt)
 }
+
+var randomTitleCount int64 = 0
+
+func randomTitle() string {
+	cnt := atomic.AddInt64(&randomTitleCount, 1)
+	return fmt.Sprintf("ワワワ-%d", cnt)
+}
+
+func randomCapacity() int {
+	return 30 + rand.Intn(100)
+}
