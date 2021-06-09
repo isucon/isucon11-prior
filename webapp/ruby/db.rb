@@ -9,6 +9,7 @@ module DB
         database: ENV['DB_NAME'] || 'isucon2021_prior',
         charset: 'utf8mb4',
         database_timezone: :utc,
+        cast: true,
         cast_booleans: true,
         symbolize_keys: true,
         reconnect: true,
@@ -73,6 +74,20 @@ module DB
       ensure
         ensure_rollback
       end
+    end
+  end
+end
+
+if ENV['MYSQL_QUERY_LOGGER'] == '1'
+  class Mysql2::Client
+    alias_method :original_query, :query
+
+    def query(sql, options = {})
+      now = Time.now
+      result = original_query(sql, options)
+      diff = ((Time.now - now) * 1000).ceil
+      puts "[SQL] (#{diff}ms) #{sql}"
+      result
     end
   end
 end

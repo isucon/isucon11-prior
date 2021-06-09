@@ -1,8 +1,10 @@
 package main
 
 import (
+	"crypto/md5"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"strings"
 
@@ -40,6 +42,27 @@ func assertJSONBody(res *http.Response, body interface{}) error {
 
 	if err := decoder.Decode(body); err != nil {
 		return failure.NewError(ErrInvalidJSON, fmt.Errorf("Invalid JSON"))
+	}
+	return nil
+}
+
+func assertChecksum(res *http.Response) error {
+	defer res.Body.Close()
+
+	path := res.Request.URL.Path
+	expected := resoucesHash[path]
+	if expected == "" {
+		return nil
+	}
+
+	hash := md5.New()
+	if _, err := io.Copy(hash, res.Body); err != nil {
+		return failure.NewError(ErrCritical, err)
+	}
+	actual := fmt.Sprintf("%x", hash.Sum(nil))
+
+	if expected != actual {
+		return failure.NewError(ErrInvalidAsset, fmt.Errorf("invalid MD5: %s %s != expected %s", path, actual, expected))
 	}
 	return nil
 }

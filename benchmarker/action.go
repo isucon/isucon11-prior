@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"fmt"
+	"net"
 	"net/url"
 	"strconv"
 	"strings"
@@ -13,7 +15,65 @@ import (
 	"github.com/isucon/isucandar/worker"
 )
 
+func BrowserAccess(ctx context.Context, user *User, rpath string) error {
+	req, err := user.Agent.GET(rpath)
+	if err != nil {
+		return failure.NewError(ErrCritical, err)
+	}
+
+	res, err := user.Agent.Do(ctx, req)
+	if err != nil {
+		return failure.NewError(ErrCritical, err)
+	}
+
+	if err := assertStatusCode(res, 200); err != nil {
+		return err
+	}
+
+	resources, perr := user.Agent.ProcessHTML(ctx, res, res.Body)
+	if perr != nil {
+		return failure.NewError(ErrCritical, err)
+	}
+
+	for _, resource := range resources {
+		if resource.Error != nil {
+			var nerr net.Error
+			if failure.As(resource.Error, &nerr) {
+				if nerr.Timeout() || nerr.Temporary() {
+					return failure.NewError(ErrTimeout, err)
+				}
+			}
+			return failure.NewError(ErrInvalidAsset, fmt.Errorf("リソースの取得に失敗しました: %s: %v", resource.Request.URL.Path, resource.Error))
+		}
+
+		if resource.Response.StatusCode == 304 {
+			continue
+		}
+
+		if err := assertStatusCode(resource.Response, 200); err != nil {
+			return err
+		}
+
+		if err := assertChecksum(resource.Response); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+type SignupResponse struct {
+	ID        string    `json:"id"`
+	Email     string    `json:"email"`
+	Nickname  string    `json:"nickname"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
 func ActionSignup(ctx context.Context, step *isucandar.BenchmarkStep, u *User) error {
+	if err := BrowserAccess(ctx, u, "/signup"); err != nil {
+		return err
+	}
+
 	values := url.Values{}
 	values.Add("email", u.Email)
 	values.Add("nickname", u.Nickname)
@@ -32,12 +92,38 @@ func ActionSignup(ctx context.Context, step *isucandar.BenchmarkStep, u *User) e
 		return failure.NewError(ErrCritical, err)
 	}
 
+	hasError := false
 	if err := assertStatusCode(res, 200); err != nil {
 		step.AddError(err)
-		return nil
+		hasError = true
 	}
 
-	step.AddScore(ScoreSignup)
+	if err := assertContentType(res, "application/json"); err != nil {
+		step.AddError(err)
+		hasError = true
+	}
+
+	jsonResp := &SignupResponse{}
+	if err := assertJSONBody(res, jsonResp); err != nil {
+		step.AddError(err)
+		hasError = true
+	} else {
+		if err := assertEqualString(u.Email, jsonResp.Email); err != nil {
+			step.AddError(err)
+			hasError = true
+		}
+
+		if err := assertEqualString(u.Nickname, jsonResp.Nickname); err != nil {
+			step.AddError(err)
+			hasError = true
+		}
+	}
+
+	if !hasError {
+		u.ID = jsonResp.ID
+		u.CreatedAt = jsonResp.CreatedAt
+		step.AddScore(ScoreSignup)
+	}
 
 	return nil
 }
@@ -74,7 +160,7 @@ func ActionSignups(parent context.Context, step *isucandar.BenchmarkStep, s *Sce
 			return
 		}
 		s.Users.Add(user)
-	}, worker.WithMaxParallelism(50), worker.WithInfinityLoop())
+	}, worker.WithMaxParallelism(s.Parallelism), worker.WithInfinityLoop())
 	if err != nil {
 		return err
 	}
@@ -89,9 +175,20 @@ func ActionSignups(parent context.Context, step *isucandar.BenchmarkStep, s *Sce
 	return nil
 }
 
+type LoginResponse struct {
+	ID        string    `json:"id"`
+	Email     string    `json:"email"`
+	Nickname  string    `json:"nickname"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
 // Action がエラーを返す → Action の失敗
 // Action がエラーを返さない → Action としては成功。シナリオとしてはどうかわからない
 func ActionLogin(ctx context.Context, step *isucandar.BenchmarkStep, u *User) error {
+	if err := BrowserAccess(ctx, u, "/login"); err != nil {
+		return err
+	}
+
 	values := url.Values{}
 
 	if u.FailOnLogin {
@@ -114,16 +211,42 @@ func ActionLogin(ctx context.Context, step *isucandar.BenchmarkStep, u *User) er
 		return failure.NewError(ErrCritical, err)
 	}
 
-	expectedStatusCode := 200
+	hasError := false
 	if u.FailOnLogin {
-		expectedStatusCode = 403
-	}
-	if err := assertStatusCode(res, expectedStatusCode); err != nil {
-		step.AddError(err)
-		return nil
+		if err := assertStatusCode(res, 403); err != nil {
+			step.AddError(err)
+			hasError = true
+		}
+	} else {
+		if err := assertStatusCode(res, 200); err != nil {
+			step.AddError(err)
+			hasError = true
+		}
+
+		if err := assertContentType(res, "application/json"); err != nil {
+			step.AddError(err)
+			hasError = true
+		}
+
+		jsonResp := &LoginResponse{}
+		if err := assertJSONBody(res, jsonResp); err != nil {
+			step.AddError(err)
+			hasError = true
+		} else {
+			if err := assertEqualString(u.Email, jsonResp.Email); err != nil {
+				step.AddError(err)
+				hasError = true
+			}
+			if err := assertEqualString(u.Nickname, jsonResp.Nickname); err != nil {
+				step.AddError(err)
+				hasError = true
+			}
+		}
 	}
 
-	step.AddScore(ScoreLogin)
+	if !hasError {
+		step.AddScore(ScoreLogin)
+	}
 
 	return nil
 }
@@ -151,7 +274,7 @@ func ActionLogins(parent context.Context, step *isucandar.BenchmarkStep, s *Scen
 		if err := ActionLogin(ctx, step, user); err != nil {
 			step.AddError(err)
 		}
-	}, worker.WithMaxParallelism(100), worker.WithLoopCount(int32(usersCount)))
+	}, worker.WithMaxParallelism(s.Parallelism), worker.WithLoopCount(int32(usersCount)))
 	if err != nil {
 		return err
 	}
@@ -233,14 +356,13 @@ func ActionCreateSchedule(ctx context.Context, step *isucandar.BenchmarkStep, s 
 	return schedule, nil
 }
 
-func ActionCreateSchedules(parent context.Context, step *isucandar.BenchmarkStep, s *Scenario) error {
-	ctx, cancel := context.WithTimeout(parent, 10*time.Second)
-	defer cancel()
-
+/*
+	10個のスケジュールを作る
+*/
+func ActionCreateSchedules(ctx context.Context, step *isucandar.BenchmarkStep, s *Scenario) error {
 	wg := sync.WaitGroup{}
 	wg.Add(1)
 
-	// とりあえず50並列くらい
 	w, err := worker.NewWorker(func(ctx context.Context, _ int) {
 		select {
 		case <-ctx.Done():
@@ -253,23 +375,25 @@ func ActionCreateSchedules(parent context.Context, step *isucandar.BenchmarkStep
 		wg.Add(1)
 		defer wg.Done()
 
-		schedule, err := ActionCreateSchedule(parent, step, s)
+		schedule, err := ActionCreateSchedule(ctx, step, s)
 		if err != nil {
 			step.AddError(err)
 			return
 		}
 		s.Schedules.Add(schedule)
-	}, worker.WithMaxParallelism(50), worker.WithInfinityLoop())
+	}, worker.WithMaxParallelism(s.Parallelism), worker.WithLoopCount(10))
 	if err != nil {
 		return err
 	}
 
-	// 一応ここでも待ち合わせはするんだけどね
 	w.Process(ctx)
 
-	// 確実に止める、止まったことを検知するために
 	wg.Done()
 	wg.Wait()
 
 	return nil
+}
+
+func ActionCreateReservation(ctx context.Context, step *isucandar.BenchmarkStep, schedule *Schedule, user *User) error {
+	return BrowserAccess(ctx, user, "/")
 }

@@ -12,7 +12,8 @@ var (
 
 func isCritical(err error) bool {
 	// Prepare step でのエラーはすべて Critical の扱い
-	return failure.IsCode(err, isucandar.ErrPrepare) || failure.IsCode(err, ErrCritical)
+	return failure.IsCode(err, isucandar.ErrPrepare) ||
+		failure.IsCode(err, ErrCritical)
 }
 
 var (
@@ -20,4 +21,17 @@ var (
 	ErrInvalidContentType failure.StringCode = "INVALID CONTENT TYPE"
 	ErrInvalidJSON        failure.StringCode = "INVALID JSON"
 	ErrMissmatch          failure.StringCode = "MISSMATCH"
+	ErrInvalidAsset       failure.StringCode = "INVALID ASSET"
+)
+
+func isDeduction(err error) bool {
+	return failure.IsCode(err, ErrInvalidStatusCode) ||
+		failure.IsCode(err, ErrInvalidContentType) ||
+		failure.IsCode(err, ErrInvalidJSON) ||
+		failure.IsCode(err, ErrInvalidAsset) ||
+		failure.IsCode(err, ErrMissmatch)
+}
+
+var (
+	ErrTimeout failure.StringCode = "Timeout"
 )

@@ -38,4 +38,5 @@ clean:
 	@$(RM) -r bin
 
 bin/benchmarker: ${GO_FILES}
+	@go generate ./...
 	@go build -o $@ ${GO_BUILD} .

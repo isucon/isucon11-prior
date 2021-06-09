@@ -31,6 +31,7 @@ var (
 	noLoad             bool
 	promOut            string
 	showVersion        bool
+	parallelism        int
 )
 
 func init() {
@@ -52,6 +53,7 @@ func init() {
 	flag.BoolVar(&noLoad, "no-load", false, "exit on finished prepare")
 	flag.StringVar(&promOut, "prom-out", "", "Prometheus textfile output path")
 	flag.BoolVar(&showVersion, "version", false, "show version and exit 1")
+	flag.IntVar(&parallelism, "parallelism", 20, "parallelism count")
 
 	timeoutDuration := ""
 	flag.StringVar(&timeoutDuration, "timeout", "10s", "request timeout duration")
@@ -67,18 +69,18 @@ func init() {
 
 func checkError(err error) (critical bool, timeout bool, deduction bool) {
 	critical = isCritical(err)
-	timeout = false   // TODO: リクエストタイムアウト(ある程度の数許容するかも)
-	deduction = false // TODO: 減点対象になるエラー
+	timeout = false // TODO: リクエストタイムアウト(ある程度の数許容するかも)
+	deduction = isDeduction(err)
 
 	return
 }
 
 func sendResult(s *Scenario, result *isucandar.BenchmarkResult, finish bool) bool {
 	passed := true
-	reason := ""
+	reason := "pass"
 	errors := result.Errors.All()
 
-	scoreRaw := int64(0)
+	scoreRaw := result.Score.Sum()
 	deduction := int64(0)
 	timeoutCount := int64(0)
 
@@ -101,11 +103,7 @@ func sendResult(s *Scenario, result *isucandar.BenchmarkResult, finish bool) boo
 	}
 
 	score := scoreRaw - deduction
-	if passed {
-		reason = "pass"
-	} else {
-		reason = "fail"
-	}
+
 	ContestantLogger.Printf("score: %d : %s", score, reason)
 
 	return passed
@@ -159,9 +157,10 @@ func main() {
 	}
 	s.BaseURL = fmt.Sprintf("%s://%s/", scheme, targetAddress)
 	s.NoLoad = noLoad
+	s.Parallelism = int32(parallelism)
 
 	b, err := isucandar.NewBenchmark(
-	// isucandar.WithLoadTimeout(70 * time.Second),
+		isucandar.WithLoadTimeout(60 * time.Second),
 	)
 	if err != nil {
 		panic(err)

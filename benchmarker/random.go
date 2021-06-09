@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math/rand"
 	"sync/atomic"
+	"time"
 )
 
 // ダミーデータの生成方法は最初のうちは凝らない方が楽です
@@ -28,13 +29,18 @@ func randomNickname() string {
 	return fmt.Sprintf("isucon-%d", cnt)
 }
 
-var randomTitleCount int64 = 0
-
 func randomTitle() string {
-	cnt := atomic.AddInt64(&randomTitleCount, 1)
-	return fmt.Sprintf("ワワワ-%d", cnt)
+	return fmt.Sprintf("%s %s", randomDate(), randomCity())
 }
 
 func randomCapacity() int {
 	return 30 + rand.Intn(100)
+}
+
+var randomDateCount int32 = 0
+
+func randomDate() string {
+	cnt := atomic.AddInt32(&randomDateCount, 1)
+	date := time.Now().AddDate(0, 0, int(cnt))
+	return date.Format("2006-01-02")
 }
