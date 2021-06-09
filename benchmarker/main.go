@@ -122,7 +122,7 @@ func writePromFile(promTags []string) {
 }
 
 func main() {
-	AdminLogger.Printf("ISUCON10 benchmarker %s", COMMIT)
+	AdminLogger.Printf("ISUCON11 Prior benchmarker %s", COMMIT)
 
 	if showVersion {
 		os.Exit(1)
