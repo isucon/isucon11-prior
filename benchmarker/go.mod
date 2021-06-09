@@ -1,3 +1,3 @@
-module github.com/isucon/isucon11-sc/benchmarker
+module github.com/isucon/isucon11-prior/benchmarker
 
 go 1.16

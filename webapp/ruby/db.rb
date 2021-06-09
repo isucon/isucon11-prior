@@ -6,7 +6,7 @@ module DB
         port: ENV['DB_PORT'] || '3306',
         username: ENV['DB_USER'] || 'isucon',
         password: ENV['DB_PASS'] || 'isucon',
-        database: ENV['DB_NAME'] || 'isumark',
+        database: ENV['DB_NAME'] || 'isucon2021_prior',
         charset: 'utf8mb4',
         database_timezone: :utc,
         cast_booleans: true,
@@ -36,7 +36,7 @@ module DB
       @finished = false
     end
 
-    def begin
+    def start
       @conn.query('BEGIN')
     end
 
@@ -63,12 +63,12 @@ module DB
 
     def exec(&block)
       begin
-        self.begin
+        start
         ret = yield @conn
-        self.commit
+        commit
         ret
       rescue Exception => e
-        self.rollback
+        rollback
         raise e
       ensure
         ensure_rollback
