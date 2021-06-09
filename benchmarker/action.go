@@ -23,7 +23,7 @@ func BrowserAccess(ctx context.Context, user *User, rpath string) error {
 
 	res, err := user.Agent.Do(ctx, req)
 	if err != nil {
-		return failure.NewError(ErrCritical, err)
+		return err
 	}
 
 	if err := assertStatusCode(res, 200); err != nil {
@@ -70,10 +70,6 @@ type SignupResponse struct {
 }
 
 func ActionSignup(ctx context.Context, step *isucandar.BenchmarkStep, u *User) error {
-	if err := BrowserAccess(ctx, u, "/signup"); err != nil {
-		return err
-	}
-
 	values := url.Values{}
 	values.Add("email", u.Email)
 	values.Add("nickname", u.Nickname)
@@ -89,7 +85,7 @@ func ActionSignup(ctx context.Context, step *isucandar.BenchmarkStep, u *User) e
 
 	res, err := u.Agent.Do(ctx, req)
 	if err != nil {
-		return failure.NewError(ErrCritical, err)
+		return err
 	}
 
 	hasError := false
@@ -185,10 +181,6 @@ type LoginResponse struct {
 // Action がエラーを返す → Action の失敗
 // Action がエラーを返さない → Action としては成功。シナリオとしてはどうかわからない
 func ActionLogin(ctx context.Context, step *isucandar.BenchmarkStep, u *User) error {
-	if err := BrowserAccess(ctx, u, "/login"); err != nil {
-		return err
-	}
-
 	values := url.Values{}
 
 	if u.FailOnLogin {
@@ -208,7 +200,7 @@ func ActionLogin(ctx context.Context, step *isucandar.BenchmarkStep, u *User) er
 
 	res, err := u.Agent.Do(ctx, req)
 	if err != nil {
-		return failure.NewError(ErrCritical, err)
+		return err
 	}
 
 	hasError := false
@@ -314,7 +306,7 @@ func ActionCreateSchedule(ctx context.Context, step *isucandar.BenchmarkStep, s 
 
 	res, err := user.Agent.Do(ctx, req)
 	if err != nil {
-		return nil, failure.NewError(ErrCritical, err)
+		return nil, err
 	}
 
 	hasError := false
@@ -356,44 +348,111 @@ func ActionCreateSchedule(ctx context.Context, step *isucandar.BenchmarkStep, s 
 	return schedule, nil
 }
 
-/*
-	10個のスケジュールを作る
-*/
-func ActionCreateSchedules(ctx context.Context, step *isucandar.BenchmarkStep, s *Scenario) error {
-	wg := sync.WaitGroup{}
-	wg.Add(1)
+type SchedulesResponseItem struct {
+	ID       string `json:"id"`
+	Title    string `json:"title"`
+	Capacity uint   `json:"capacity"`
+	Reserved uint   `json:"reserved"`
+}
 
-	w, err := worker.NewWorker(func(ctx context.Context, _ int) {
-		select {
-		case <-ctx.Done():
-			// context が終わってたら抜ける
-			// あ、Paralle だと一回しか実行しないのか
-			return
-		default:
-		}
+func ActionGetSchedules(ctx context.Context, step *isucandar.BenchmarkStep, user *User) ([]*SchedulesResponseItem, error) {
+	req, err := user.Agent.GET("/api/schedules")
+	if err != nil {
+		return nil, failure.NewError(ErrCritical, err)
+	}
 
-		wg.Add(1)
-		defer wg.Done()
+	res, err := user.Agent.Do(ctx, req)
+	if err != nil {
+		return nil, err
+	}
 
-		schedule, err := ActionCreateSchedule(ctx, step, s)
-		if err != nil {
-			step.AddError(err)
-			return
-		}
-		s.Schedules.Add(schedule)
-	}, worker.WithMaxParallelism(s.Parallelism), worker.WithLoopCount(10))
+	if err := assertStatusCode(res, 200); err != nil {
+		step.AddError(err)
+	}
+
+	if err := assertContentType(res, "application/json"); err != nil {
+		step.AddError(err)
+	}
+
+	schedules := []*SchedulesResponseItem{}
+	if err := assertJSONBody(res, &schedules); err != nil {
+		step.AddError(err)
+	}
+
+	return schedules, nil
+}
+
+type ScheduleResponse struct {
+	ID           string `json:"id"`
+	Title        string `json:"title"`
+	Capacity     uint   `json:"capacity"`
+	Reserved     uint   `json:"reserved"`
+	Reservations []struct {
+		ID     string `json:"id"`
+		UserID string `json:"user_id"`
+		User   struct {
+			Nickname string `json:"nickname"`
+			Email    string `json:"email"`
+		} `json:"user"`
+	} `json:"reservations"`
+}
+
+func ActionGetSchedule(ctx context.Context, step *isucandar.BenchmarkStep, id string, user *User) (*ScheduleResponse, error) {
+	req, err := user.Agent.GET("/api/schedules/" + id)
+	if err != nil {
+		return nil, failure.NewError(ErrCritical, err)
+	}
+
+	res, err := user.Agent.Do(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := assertStatusCode(res, 200); err != nil {
+		step.AddError(err)
+	}
+
+	if err := assertContentType(res, "application/json"); err != nil {
+		step.AddError(err)
+	}
+
+	schedule := &ScheduleResponse{}
+	if err := assertJSONBody(res, schedule); err != nil {
+		step.AddError(err)
+	}
+
+	return schedule, nil
+}
+
+func ActionCreateReservation(ctx context.Context, step *isucandar.BenchmarkStep, schedule *Schedule, user *User) error {
+	values := url.Values{}
+	values.Add("schedule_id", schedule.ID)
+
+	body := strings.NewReader(values.Encode())
+	req, err := user.Agent.POST("/api/reservations", body)
+	if err != nil {
+		return failure.NewError(ErrCritical, err)
+	}
+
+	res, err := user.Agent.Do(ctx, req)
 	if err != nil {
 		return err
 	}
 
-	w.Process(ctx)
+	hasError := false
+	if err := assertStatusCode(res, 200); err != nil {
+		// 200 じゃなかったらなんか駄目だったんだな、という判定
+		// step.AddError(err)
+		hasError = true
+	}
 
-	wg.Done()
-	wg.Wait()
+	if !hasError {
+		user.mu.Lock()
+		user.ReservedScheduleIDs = append(user.ReservedScheduleIDs, schedule.ID)
+		user.mu.Unlock()
+
+		step.AddScore(ScoreCreateReservation)
+	}
 
 	return nil
-}
-
-func ActionCreateReservation(ctx context.Context, step *isucandar.BenchmarkStep, schedule *Schedule, user *User) error {
-	return BrowserAccess(ctx, user, "/")
 }

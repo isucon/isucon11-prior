@@ -1,4 +1,4 @@
-import React, { createContext, FC, useCallback, useContext, useState } from "react";
+import React, { createContext, FC, useCallback, useContext, useEffect, useState } from "react";
 import { User } from "./model";
 
 
@@ -23,6 +23,12 @@ export const AppContextProvider: FC = ({ children }) => {
   }, [update])
   const logout = useCallback<AppContext['logout']>(() => {
     update(undefined);
+  }, [update])
+
+  useEffect(() => {
+    fetch('/api/session').then((r) => r.json()).then((user) => {
+      update(user)
+    })
   }, [update])
 
   return <AppContext.Provider value={{ user, login, logout }} children={children} />

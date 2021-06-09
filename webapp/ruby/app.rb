@@ -96,6 +96,10 @@ class App < Sinatra::Base
     json(language: 'ruby')
   end
 
+  get '/api/session' do
+    json(current_user)
+  end
+
   post '/api/signup' do
     id = ''
     nickname = ''
@@ -179,7 +183,7 @@ class App < Sinatra::Base
   end
 
   get '/api/schedules' do
-    schedules = db.xquery('SELECT * FROM `schedules` ORDER BY `id` ASC');
+    schedules = db.xquery('SELECT * FROM `schedules` ORDER BY `id` DESC');
     schedules.each do |schedule|
       get_reservations_count(schedule)
     end

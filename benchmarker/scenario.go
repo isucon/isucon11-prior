@@ -2,8 +2,11 @@ package main
 
 import (
 	"context"
+	"sync"
+	"time"
 
 	"github.com/isucon/isucandar/failure"
+	"github.com/isucon/isucandar/worker"
 
 	"github.com/isucon/isucandar/agent"
 
@@ -78,21 +81,144 @@ func (s *Scenario) Load(parent context.Context, step *isucandar.BenchmarkStep) e
 		return nil
 	}
 
-	/*
-		TODO: 実際の負荷走行シナリオ
-	*/
+	ctx, cancel := context.WithTimeout(parent, 60*time.Second)
+	defer cancel()
 
-	if err := ActionSignups(parent, step, s); err != nil {
-		return err
-	}
+	wg := sync.WaitGroup{}
+	wg.Add(1)
 
-	if err := ActionLogins(parent, step, s); err != nil {
-		return err
-	}
+	// すべてのスケジュールが予定で埋まっていたら、新しくスケジュールを作る
+	scheduleWorker, err := worker.NewWorker(func(ctx context.Context, _ int) {
+		select {
+		case <-ctx.Done():
+			return
+		case <-time.After(100 * time.Millisecond):
+		}
 
-	if err := ActionCreateSchedules(parent, step, s); err != nil {
-		return err
+		wg.Add(1)
+		defer wg.Done()
+
+		err := BrowserAccess(ctx, s.StaffUser, "/")
+		if err != nil {
+			return
+		}
+
+		schedules, err := ActionGetSchedules(ctx, step, s.StaffUser)
+		if err != nil {
+			step.AddError(err)
+			return
+		}
+
+		hasCapacity := 0
+		for _, s := range schedules {
+			if s.Capacity > s.Reserved {
+				hasCapacity++
+			}
+		}
+		if hasCapacity >= 6 {
+			return
+		}
+
+		schedule, err := ActionCreateSchedule(ctx, step, s)
+		if err != nil {
+			step.AddError(err)
+		} else {
+			s.Schedules.Add(schedule)
+		}
+	}, worker.WithInfinityLoop(), worker.WithMaxParallelism(s.Parallelism))
+	if err != nil {
+		return failure.NewError(ErrCritical, err)
 	}
+	go func() {
+		wg.Add(1)
+		scheduleWorker.Process(ctx)
+		wg.Done()
+	}()
+
+	userWorker, err := worker.NewWorker(func(ctx context.Context, _ int) {
+		select {
+		case <-ctx.Done():
+			return
+		case <-time.After(100 * time.Millisecond):
+		}
+
+		wg.Add(1)
+		defer wg.Done()
+
+		user, err := s.NewUser()
+		if err != nil {
+			step.AddError(failure.NewError(ErrCritical, err))
+			return
+		}
+
+		if err := BrowserAccess(ctx, user, "/"); err != nil {
+			step.AddError(err)
+			return
+		}
+		if err := ActionSignup(ctx, step, user); err != nil || user.ID == "" {
+			step.AddError(err)
+			return
+		}
+		if err := ActionLogin(ctx, step, user); err != nil {
+			step.AddError(err)
+			return
+		}
+		// ログイン失敗する人はここでおしまい
+		if user.FailOnLogin {
+			return
+		}
+
+		for !user.IsEnoughNeeds() {
+			select {
+			case <-ctx.Done():
+				return
+			default:
+			}
+
+			// リロードして
+			if err := BrowserAccess(ctx, user, "/"); err != nil {
+				step.AddError(err)
+				continue
+			}
+
+			// スケジュール一覧を見て
+			schedules, err := ActionGetSchedules(ctx, step, user)
+			if err != nil {
+				step.AddError(err)
+				continue
+			}
+
+			for _, schedule := range schedules {
+				if schedule.Capacity <= schedule.Reserved {
+					continue
+				}
+				sschedule := s.Schedules.GetByID(schedule.ID)
+
+				if user.IsReserved(sschedule) {
+					continue
+				}
+
+				// キャパが空いてて、取ってない予定なら抑えにかかる
+				_, err := ActionGetSchedule(ctx, step, schedule.ID, user)
+				if err != nil {
+					step.AddError(err)
+					break
+				}
+
+				if err := ActionCreateReservation(ctx, step, sschedule, user); err != nil {
+					step.AddError(err)
+					break
+				}
+			}
+		}
+	}, worker.WithInfinityLoop(), worker.WithMaxParallelism(s.Parallelism))
+	if err != nil {
+		return failure.NewError(ErrCritical, err)
+	}
+	userWorker.Process(ctx)
+
+	wg.Done()
+	wg.Wait()
 
 	return nil
 }

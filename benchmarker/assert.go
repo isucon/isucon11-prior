@@ -23,7 +23,7 @@ func assertInitialize(step *isucandar.BenchmarkStep, res *http.Response) {
 
 func assertStatusCode(res *http.Response, code int) error {
 	if res.StatusCode != code {
-		return failure.NewError(ErrInvalidStatusCode, fmt.Errorf("Invalid status code: %d (expected: %d)", res.StatusCode, code))
+		return failure.NewError(ErrInvalidStatusCode, fmt.Errorf("Invalid status code: %d (expected: %d) at %s", res.StatusCode, code, res.Request.URL.Path))
 	}
 	return nil
 }

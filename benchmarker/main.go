@@ -7,6 +7,7 @@ import (
 	"flag"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"os"
 	"runtime/pprof"
 	"strings"
@@ -45,6 +46,7 @@ func init() {
 	agent.DefaultTLSConfig.MinVersion = tls.VersionTLS12
 	agent.DefaultTLSConfig.InsecureSkipVerify = false
 
+	isAdmin := false
 	flag.StringVar(&profileFile, "profile", "", "ex: cpu.out")
 	flag.StringVar(&hostAdvertise, "host-advertise", "local.t.isucon.dev", "hostname to advertise against target")
 	flag.StringVar(&tlsCertificatePath, "tls-cert", "../secrets/cert.pem", "path to TLS certificate for a push service")
@@ -54,6 +56,7 @@ func init() {
 	flag.StringVar(&promOut, "prom-out", "", "Prometheus textfile output path")
 	flag.BoolVar(&showVersion, "version", false, "show version and exit 1")
 	flag.IntVar(&parallelism, "parallelism", 20, "parallelism count")
+	flag.BoolVar(&isAdmin, "admin", false, "administrator mode")
 
 	timeoutDuration := ""
 	flag.StringVar(&timeoutDuration, "timeout", "10s", "request timeout duration")
@@ -65,6 +68,10 @@ func init() {
 		panic(err)
 	}
 	agent.DefaultRequestTimeout = timeout
+
+	if !isAdmin {
+		AdminLogger = log.New(&Blackhole{}, "", log.Lmicroseconds)
+	}
 }
 
 func checkError(err error) (critical bool, timeout bool, deduction bool) {
@@ -79,6 +86,11 @@ func sendResult(s *Scenario, result *isucandar.BenchmarkResult, finish bool) boo
 	passed := true
 	reason := "pass"
 	errors := result.Errors.All()
+
+	result.Score.Set(ScoreSignup, 0)
+	result.Score.Set(ScoreLogin, 1)
+	result.Score.Set(ScoreCreateSchedule, 10)
+	result.Score.Set(ScoreCreateReservation, 1)
 
 	scoreRaw := result.Score.Sum()
 	deduction := int64(0)
@@ -160,7 +172,7 @@ func main() {
 	s.Parallelism = int32(parallelism)
 
 	b, err := isucandar.NewBenchmark(
-		isucandar.WithLoadTimeout(60 * time.Second),
+		isucandar.WithLoadTimeout(70 * time.Second),
 	)
 	if err != nil {
 		panic(err)
@@ -168,8 +180,7 @@ func main() {
 
 	errorCount := int64(0)
 	b.OnError(func(err error, step *isucandar.BenchmarkStep) {
-		// Load 中の timeout のみログから除外
-		if failure.IsCode(err, failure.TimeoutErrorCode) && failure.IsCode(err, isucandar.ErrLoad) {
+		if failure.IsCode(err, failure.TimeoutErrorCode) {
 			return
 		}
 
