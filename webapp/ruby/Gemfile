@@ -8,4 +8,5 @@ gem 'ulid'
 
 group :development do
   gem 'sinatra-contrib'
+  gem 'simplecov'
 end
