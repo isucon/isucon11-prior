@@ -1,4 +1,6 @@
-execute 'git clone --depth 1 git@github.com:isucon/isucon11-sc.git /home/isucon/src/github.com/isucon/isucon11-sc' do
+execute 'rm -rf /home/isucon/src/github.com/isucon/isucon11-sc'
+
+execute 'git clone --depth 1 github-isucon-net:isucon/isucon11-sc.git /home/isucon/src/github.com/isucon/isucon11-sc' do
   user 'isucon'
   not_if 'test -d /home/isucon/src/github.com/isucon/isucon11-sc'
 end

@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"time"
 
@@ -193,6 +194,10 @@ func (s *Scenario) Load(parent context.Context, step *isucandar.BenchmarkStep) e
 					continue
 				}
 				sschedule := s.Schedules.GetByID(schedule.ID)
+				if sschedule == nil {
+					step.AddError(failure.NewError(ErrInvalid, fmt.Errorf("存在しないはずのスケジュール ID です: %s", schedule.ID)))
+					continue
+				}
 
 				if user.IsReserved(sschedule) {
 					continue

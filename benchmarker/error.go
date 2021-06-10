@@ -22,6 +22,7 @@ var (
 	ErrInvalidJSON        failure.StringCode = "INVALID JSON"
 	ErrMissmatch          failure.StringCode = "MISSMATCH"
 	ErrInvalidAsset       failure.StringCode = "INVALID ASSET"
+	ErrInvalid            failure.StringCode = "Invalid"
 )
 
 func isDeduction(err error) bool {
@@ -29,7 +30,8 @@ func isDeduction(err error) bool {
 		failure.IsCode(err, ErrInvalidContentType) ||
 		failure.IsCode(err, ErrInvalidJSON) ||
 		failure.IsCode(err, ErrInvalidAsset) ||
-		failure.IsCode(err, ErrMissmatch)
+		failure.IsCode(err, ErrMissmatch) ||
+		failure.IsCode(err, ErrInvalid)
 }
 
 var (
