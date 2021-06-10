@@ -6,11 +6,6 @@ require_relative 'db'
 Time.zone = 'UTC'
 
 class App < Sinatra::Base
-  configure :development do
-    require 'sinatra/reloader'
-    register Sinatra::Reloader
-  end
-
   set :session_secret, 'tagomoris'
   set :sessions, key: 'session_isucon2021_prior', expire_after: 3600
   set :show_exceptions, false
@@ -27,7 +22,7 @@ class App < Sinatra::Base
     end
 
     def get_config(key)
-      result = db.xquery('SELECT `value` FROM `config` WHERE `key` = ? LIMIT 1', key)&.first
+      result = db.xquery('SELECT `value` FROM `config` WHERE `key` = ? LIMIT 1', key).first
       if result
         return result[:value]
       else
@@ -37,7 +32,7 @@ class App < Sinatra::Base
 
     def generate_id(table, tx)
       id = ULID.generate
-      while tx.xquery("SELECT 1 FROM `#{table}` WHERE `id` = ? LIMIT 1", id)&.first
+      while tx.xquery("SELECT 1 FROM `#{table}` WHERE `id` = ? LIMIT 1", id).first
         id = ULID.generate
       end
       id
@@ -45,6 +40,10 @@ class App < Sinatra::Base
 
     def required_login!
       halt(401, JSON.generate(error: 'login required')) if current_user.nil?
+    end
+
+    def required_staff_login!
+      halt(401, JSON.generate(error: 'login required')) if current_user.nil? || !current_user[:staff]
     end
 
     def current_user
@@ -120,11 +119,10 @@ class App < Sinatra::Base
   post '/api/login' do
     email = params[:email]
 
-    user = db.xquery('SELECT `id`, `nickname` FROM `users` WHERE `email` = ? LIMIT 1', email)&.first
+    user = db.xquery('SELECT `id`, `nickname` FROM `users` WHERE `email` = ? LIMIT 1', email).first
 
     if user
       session[:user_id] = user[:id]
-      p current_user
       json({ id: current_user[:id], email: current_user[:email], nickname: current_user[:nickname], created_at: current_user[:created_at] })
     else
       session[:user_id] = nil
@@ -143,13 +141,15 @@ class App < Sinatra::Base
   end
 
   post '/api/schedules' do
+    required_staff_login!
+
     transaction do |tx|
       id = generate_id('schedules', tx)
       title = params[:title].to_s
       capacity = params[:capacity].to_i
 
       tx.xquery('INSERT INTO `schedules` (`id`, `title`, `capacity`, `created_at`) VALUES (?, ?, ?, NOW(6))', id, title, capacity)
-      created_at = tx.xquery('SELECT `created_at` FROM `schedules` WHERE `id` = ?', id)&.first[:created_at]
+      created_at = tx.xquery('SELECT `created_at` FROM `schedules` WHERE `id` = ?', id).first[:created_at]
 
       json({ id: id, title: title, capacity: capacity, created_at: created_at })
     end
@@ -163,9 +163,9 @@ class App < Sinatra::Base
       schedule_id = params[:schedule_id].to_s
       user_id = current_user[:id]
 
-      halt(403, JSON.generate(error: 'schedule not found')) if tx.xquery('SELECT 1 FROM `schedules` WHERE `id` = ? LIMIT 1', schedule_id)&.first.nil?
-      halt(403, JSON.generate(error: 'user not found')) unless tx.xquery('SELECT 1 FROM `users` WHERE `id` = ? LIMIT 1', user_id)&.first
-      halt(403, JSON.generate(error: 'already taken')) if tx.xquery('SELECT 1 FROM `reservations` WHERE `schedule_id` = ? AND `user_id` = ? LIMIT 1', schedule_id, user_id)&.first
+      halt(403, JSON.generate(error: 'schedule not found')) if tx.xquery('SELECT 1 FROM `schedules` WHERE `id` = ? LIMIT 1', schedule_id).first.nil?
+      halt(403, JSON.generate(error: 'user not found')) unless tx.xquery('SELECT 1 FROM `users` WHERE `id` = ? LIMIT 1', user_id).first
+      halt(403, JSON.generate(error: 'already taken')) if tx.xquery('SELECT 1 FROM `reservations` WHERE `schedule_id` = ? AND `user_id` = ? LIMIT 1', schedule_id, user_id).first
 
       capacity = tx.xquery('SELECT `capacity` FROM `schedules` WHERE `id` = ? LIMIT 1', schedule_id).first[:capacity]
       reserved = 0
@@ -176,7 +176,7 @@ class App < Sinatra::Base
       halt(403, JSON.generate(error: 'capacity is already full')) if reserved >= capacity
 
       tx.xquery('INSERT INTO `reservations` (`id`, `schedule_id`, `user_id`, `created_at`) VALUES (?, ?, ?, NOW(6))', id, schedule_id, user_id)
-      created_at = tx.xquery('SELECT `created_at` FROM `reservations` WHERE `id` = ?', id)&.first
+      created_at = tx.xquery('SELECT `created_at` FROM `reservations` WHERE `id` = ?', id).first[:created_at]
 
       json({ id: id, schedule_id: schedule_id, user_id: user_id, created_at: created_at})
     end
@@ -193,7 +193,7 @@ class App < Sinatra::Base
 
   get '/api/schedules/:id' do
     id = params[:id]
-    schedule = db.xquery('SELECT * FROM `schedules` WHERE id = ? LIMIT 1', id).first;
+    schedule = db.xquery('SELECT * FROM `schedules` WHERE id = ? LIMIT 1', id).first
     halt(404, {}) unless schedule
 
     get_reservations(schedule)

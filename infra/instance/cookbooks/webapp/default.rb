@@ -29,11 +29,17 @@ execute 'bundle install' do
   /home/isucon/.x bundle config set deployment true
   /home/isucon/.x bundle config set path vendor/bundle
   /home/isucon/.x bundle install -j8
+  /home/isucon/.x bundle config set deployment false
   EOS
   user 'isucon'
   cwd '/home/isucon/webapp/ruby'
   not_if 'cd /home/isucon/webapp/ruby && test -e .bundle && /home/isucon/.x bundle check'
   notifies :run, 'execute[systemctl restart web-ruby]'
+end
+
+execute '/home/isucon/.x bundle config set deployment false' do
+  user 'isucon'
+  cwd '/home/isucon/webapp/ruby'
 end
 
 remote_file '/home/isucon/env' do
