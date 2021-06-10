@@ -21,7 +21,7 @@ import (
 )
 
 var (
-	COMMIT             string
+	REVISION           string
 	targetAddress      string
 	profileFile        string
 	hostAdvertise      string
@@ -141,9 +141,10 @@ func writePromFile(promTags []string) {
 }
 
 func main() {
-	AdminLogger.Printf("ISUCON11 Prior benchmarker %s", COMMIT)
+	AdminLogger.Printf("ISUCON11 Prior benchmarker %s", REVISION)
 
 	if showVersion {
+		fmt.Println(REVISION)
 		os.Exit(1)
 	}
 

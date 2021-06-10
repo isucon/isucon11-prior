@@ -1,4 +1,4 @@
-REVISION:=$(shell git rev-parse --short HEAD 2> /dev/null || cat REVISION)
+REVISION:=$(shell cat ../REVISION 2> /dev/null || git rev-parse --short HEAD 2> /dev/null || cat REVISION 2> /dev/null)
 
 GO_FILES:=$(shell find . -type f -name '*.go' -print)
 
