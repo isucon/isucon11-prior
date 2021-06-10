@@ -1,0 +1,22 @@
+upstream webapp {
+  server 127.0.0.1:9292;
+}
+
+server {
+	listen 80 default_server;
+	listen [::]:80 default_server;
+	server_name _;
+
+	root /home/isucon/webapp/frontend/dist;
+	index index.html;
+
+	location / {
+		try_files $uri @webapp;
+	}
+
+  location @webapp {
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header Host $http_host;
+    proxy_pass http://webapp;
+  }
+}

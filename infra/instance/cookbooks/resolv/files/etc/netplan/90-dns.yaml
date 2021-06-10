@@ -1,0 +1,8 @@
+network:
+  version: 2
+  ethernets:
+    ens160:
+      nameservers:
+        addresses:
+          - 8.8.8.8
+          - 8.8.4.4

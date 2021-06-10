@@ -1,0 +1,5 @@
+admins:
+  - github-user-name
+contestants:
+  'hostname':
+    - github-user-name
