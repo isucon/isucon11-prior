@@ -157,7 +157,7 @@ func main() {
 		defer pprof.StopCPUProfile()
 	}
 	if targetAddress == "" {
-		targetAddress = "localhost:9292"
+		targetAddress = "localhost"
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
