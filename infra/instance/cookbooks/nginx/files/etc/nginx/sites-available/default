@@ -10,6 +10,12 @@ server {
 	root /home/isucon/webapp/frontend/dist;
 	index index.html;
 
+  location /stub_status {
+    stub_status;
+    allow 127.0.0.1;
+    deny all;
+  }
+
 	location / {
 		try_files $uri @webapp;
 	}

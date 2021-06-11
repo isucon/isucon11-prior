@@ -41,27 +41,32 @@ CLI::UI::StdoutRouter.enable
 CLI::UI::SpinGroup.new.tap do |group|
   instances.each do |ip|
     group.add(ip) do |spinner|
-      spinner.update_title("#{ip}: ping")
-      until ping?(ip)
-        sleep 1
-      end
+      check = Timeout.timeout(10) do
+        spinner.update_title("#{ip}: ping")
+        until ping?(ip)
+          sleep 1
+        end
 
-      spinner.update_title("#{ip}: ssh")
-      until ssh?(ip)
-        sleep 1
-      end
+        spinner.update_title("#{ip}: ssh")
+        until ssh?(ip)
+          sleep 1
+        end
 
-      spinner.update_title("#{ip}: app")
-      until app?(ip)
-        sleep 1
-      end
+        spinner.update_title("#{ip}: app")
+        until app?(ip)
+          sleep 1
+        end
 
-      spinner.update_title("#{ip}: netdata")
-      until netdata?(ip)
-        sleep 1
-      end
+        spinner.update_title("#{ip}: netdata")
+        until netdata?(ip)
+          sleep 1
+        end
 
-      spinner.update_title("#{ip}: OK")
+        spinner.update_title("#{ip}: OK")
+      rescue
+        false
+      end
+      check
     end
     group.wait
   end

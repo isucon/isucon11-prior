@@ -8,7 +8,7 @@ MITAMAE_URL = "https://github.com/itamae-kitchen/mitamae/releases/download/v1.12
 
 instances = YAML.load_file('instances.yml')
 
-Parallel.each(instances) do |ip|
+Parallel.each(instances, in_processes: 10) do |ip|
   name = '%03d' % ip.split('.').last.to_i
   logger = Logger.new(STDOUT, progname: name, datetime_format: "%H:%M:%S")
   logger.info("start")
