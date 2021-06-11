@@ -1,6 +1,8 @@
 include_cookbook 'systemd'
 include_cookbook 'repository'
 
+# execute 'rm -rf /home/isucon/webapp'
+
 execute 'install webapp' do
   command <<-EOS
   rm -rf /home/isucon/webapp

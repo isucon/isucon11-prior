@@ -16,6 +16,12 @@ user 'isucon' do
   create_home true
 end
 
+remote_file '/home/isucon/.gitconfig' do
+  owner 'isucon'
+  group 'isucon'
+  mode '644'
+end
+
 directory '/home/isucon/.ssh' do
   owner 'isucon'
   group 'isucon'
@@ -28,13 +34,13 @@ remote_file '/home/isucon/.ssh/config' do
   mode '600'
 end
 
-remote_file '/home/isucon/.ssh/id_ed25519' do
+remote_file '/home/isucon/.ssh/isucon' do
   owner 'isucon'
   group 'isucon'
   mode '600'
 end
 
-remote_file '/home/isucon/.ssh/id_ed25519.pub' do
+remote_file '/home/isucon/.ssh/isucon.pub' do
   owner 'isucon'
   group 'isucon'
   mode '644'
