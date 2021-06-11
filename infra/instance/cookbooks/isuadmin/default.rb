@@ -1,17 +1,13 @@
-require 'net/http'
-require 'uri'
-
 node.reverse_merge!({
-  admins: []
+  admins: [],
+  ssh_keys: {},
 })
 
-ssh_keys = node[:admins].map do |username|
-  Net::HTTP.get(URI.parse("https://github.com/#{username}.keys")).strip
-end
+admins = (node[:admins] || [])
 
 file '/home/isuadmin/.ssh/authorized_keys' do
   owner 'isuadmin'
   group 'isuadmin'
   mode '0600'
-  content ssh_keys.sort.uniq.join("\n").strip + "\n"
+  content admins.map {|u| node[:ssh_keys][u] || [] }.flatten.sort.uniq.join("\n") + "\n"
 end

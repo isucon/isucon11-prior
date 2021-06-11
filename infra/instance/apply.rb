@@ -3,17 +3,28 @@ Bundler.require
 require "yaml"
 require "open3"
 require "logger"
-
-MITAMAE_URL = "https://github.com/itamae-kitchen/mitamae/releases/download/v1.12.6/mitamae-x86_64-linux"
+require 'net/http'
+require 'uri'
 
 instances = YAML.load_file('instances.yml')
+node = YAML.load_file('node.yml')
 
-Parallel.each(instances, in_processes: 10) do |ip|
+github_keys = {}
+github_users = ((node['admins'] || []) + (node['contestants'] || {}).values.flatten).uniq
+github_users.each do |username|
+  keys = Net::HTTP.get(URI.parse("https://github.com/#{username}.keys")).strip.split("\n").map(&:strip).sort.uniq
+  github_keys[username] = keys.map { |k| "#{k} #{username}" }
+end
+File.write 'keys.yml', YAML.dump({ 'ssh_keys' => github_keys })
+
+File.write 'apply.yml', YAML.dump(node.merge({ 'ssh_keys' => github_keys }))
+
+Parallel.each(instances, in_processes: 50) do |ip|
   name = '%03d' % ip.split('.').last.to_i
   logger = Logger.new(STDOUT, progname: name, datetime_format: "%H:%M:%S")
   logger.info("start")
 
-  Open3.popen3("bundle exec itamae ssh --node-yaml node.yml --host #{ip} recipe.rb") do |i, o, e, w|
+  Open3.popen3("bundle exec itamae ssh --node-yaml apply.yml --host #{ip} recipe.rb") do |i, o, e, w|
     i.close
     o.each { |line| logger.info(line.rstrip) }
     e.each { |line| logger.error(line.rstrip) }

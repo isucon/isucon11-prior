@@ -31,3 +31,10 @@ remote_file '/etc/netdata/python.d/mysql.conf' do
   mode '644'
   notifies :run, 'execute[systemctl restart netdata]'
 end
+
+remote_file '/etc/netdata/python.d/redis.conf' do
+  owner 'root'
+  group 'root'
+  mode '644'
+  notifies :run, 'execute[systemctl restart netdata]'
+end

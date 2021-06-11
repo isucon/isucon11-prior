@@ -1,5 +1,11 @@
 include_cookbook 'xbuild'
 
+%w[
+  autoconf bison build-essential libssl-dev libyaml-dev libreadline-dev zlib1g-dev libncurses5-dev libffi-dev libgdbm6 libgdbm-dev libdb-dev
+].each do |_|
+  package _
+end
+
 version = '3.0.1'
 
 execute "rm -rf /home/isucon/local/ruby; /opt/xbuild/ruby-install #{version} /home/isucon/local/ruby" do

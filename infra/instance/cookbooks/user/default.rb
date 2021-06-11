@@ -1,14 +1,9 @@
-require 'net/http'
-require 'uri'
-
 node.reverse_merge!({
   contestants: {},
+  ssh_keys: {},
 })
 
 users = (node[:contestants][node[:hostname]] || [])
-ssh_keys = users.map do |username|
-  Net::HTTP.get(URI.parse("https://github.com/#{username}.keys")).strip
-end
 
 user 'isucon' do
   home '/home/isucon'
@@ -50,7 +45,7 @@ file '/home/isucon/.ssh/authorized_keys' do
   owner 'isucon'
   group 'isucon'
   mode '0600'
-  content ssh_keys.sort.uniq.join("\n").strip + "\n"
+  content users.map {|u| node[:ssh_keys][u] || [] }.flatten.sort.uniq.join("\n") + "\n"
 end
 
 remote_file '/home/isucon/.bashrc' do
@@ -64,4 +59,9 @@ file '/etc/sudoers.d/isucon' do
   owner 'root'
   group 'root'
   mode '440'
+end
+
+execute 'ssh-keygen -b 2048 -t rsa -f /home/isucon/.ssh/id_rsa -q -N ""' do
+  user 'isucon'
+  not_if 'test -f /home/isucon/.ssh/id_rsa'
 end

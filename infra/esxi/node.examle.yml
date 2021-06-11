@@ -1,0 +1,12 @@
+restore: true
+password: password
+vmx_root: /vmfs/volumes/storage01/
+source_vmdk_path: /vmfs/volumes/storage01/ubuntu-20.04.vmdk
+ip_prefix: "192.168.0"
+gateway: "192.168.0.254"
+instance:
+  cpu: 2
+  mem: 4096
+  hdd: 40g
+admins:
+  - rosylilly
