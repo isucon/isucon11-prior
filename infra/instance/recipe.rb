@@ -1,6 +1,7 @@
 module RecipeHelper
   def include_cookbook(name)
-    include_recipe File.join(__dir__, "cookbooks", name, "default.rb")
+    cookbook, recipe = *name.split('/')
+    include_recipe File.join(__dir__, "cookbooks", cookbook, "#{recipe || 'default'}.rb")
   end
 end
 

@@ -14,7 +14,7 @@ execute 'install webapp' do
 
   notifies :run, 'execute[setup db]', :immediately
   notifies :run, 'execute[bundle install]', :immediately
-  notifies :run, 'execute[systemctl restart web-ruby]'
+  notifies :restart, 'service[web-ruby]'
 end
 
 execute 'setup db' do
@@ -36,12 +36,13 @@ execute 'bundle install' do
   user 'isucon'
   cwd '/home/isucon/webapp/ruby'
   not_if 'cd /home/isucon/webapp/ruby && test -e .bundle && /home/isucon/.x bundle check'
-  notifies :run, 'execute[systemctl restart web-ruby]'
+  notifies :restart, 'service[web-ruby]'
 end
 
 execute '/home/isucon/.x bundle config set deployment false' do
   user 'isucon'
   cwd '/home/isucon/webapp/ruby'
+  only_if 'cd /home/isucon/webapp/ruby && /home/isucon/.x bundle config get --parseable deployment | grep "deployment=true"'
 end
 
 remote_file '/home/isucon/env' do
@@ -54,10 +55,10 @@ remote_file '/etc/systemd/system/web-ruby.service' do
   owner 'root'
   group 'root'
   mode  '0644'
-  notifies :run, 'execute[systemctl daemon-reload]'
-  notifies :run, 'execute[systemctl restart web-ruby]'
+  notifies :run, 'execute[systemctl daemon-reload]', :immediately
+  notifies :restart, 'service[web-ruby]'
 end
 
-execute 'systemctl restart web-ruby' do
-  action :nothing
+service 'web-ruby' do
+  action [:enable, :start]
 end

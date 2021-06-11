@@ -1,10 +1,12 @@
-execute 'systemctl restart sshd' do
-  action :nothing
+package 'openssh-server'
+
+service 'ssh' do
+  action [:enable, :start]
 end
 
 remote_file '/etc/ssh/sshd_config' do
   owner 'root'
   group 'root'
   mode '644'
-  notifies :run, 'execute[systemctl restart sshd]', :delayed
+  notifies :restart, 'service[sshd]'
 end
