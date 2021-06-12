@@ -15,6 +15,6 @@ node.reverse_merge!({
   machines: machines,
 });
 
-# include_cookbook 'power/off'
+include_cookbook 'power/shutdown'
 include_cookbook 'vm'
 include_cookbook 'power/on'

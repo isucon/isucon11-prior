@@ -9,7 +9,8 @@ node.reverse_merge!({
   gateway: "127.0.0.254",
   restore: false,
   instance: {
-    cpu: 2,
+    cpu: 1,
+    mhz: 2560,
     mem: 4096,
     hdd: "8g",
   },
@@ -39,6 +40,8 @@ node[:machines].each do |machine|
 
   vm_data['guestOS'] = 'ubuntu-64'
   vm_data['numvcpus'] = node[:instance][:cpu]
+  vm_data['sched.cpu.shares'] = node[:instance][:mhz]
+  vm_data['sched.cpu.units'] = 'mhz'
   vm_data['memSize'] = node[:instance][:mem]
 
   if node[:restore]
