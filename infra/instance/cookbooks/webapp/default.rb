@@ -1,14 +1,12 @@
 include_cookbook 'systemd'
 include_cookbook 'repository'
 
-# execute 'rm -rf /home/isucon/webapp'
-
 execute 'install webapp' do
   command <<-EOS
   rm -rf /home/isucon/webapp
   cp -a #{node[:isucon11_repository]}/webapp /home/isucon/webapp
   cp #{node[:isucon11_repository]}/REVISION /home/isucon/webapp/REVISION
-  chown -r isucon:isucon /home/isucon/webapp/REVISION
+  chown -R isucon:isucon /home/isucon/webapp
   EOS
   cwd '/home/isucon'
   not_if "test -d /home/isucon/webapp && test -f /home/isucon/webapp/REVISION && test $(cat /home/isucon/webapp/REVISION) = $(cat #{node[:isucon11_repository]}/REVISION)"

@@ -29,18 +29,6 @@ remote_file '/home/isucon/.ssh/config' do
   mode '600'
 end
 
-remote_file '/home/isucon/.ssh/isucon' do
-  owner 'isucon'
-  group 'isucon'
-  mode '600'
-end
-
-remote_file '/home/isucon/.ssh/isucon.pub' do
-  owner 'isucon'
-  group 'isucon'
-  mode '644'
-end
-
 file '/home/isucon/.ssh/authorized_keys' do
   owner 'isucon'
   group 'isucon'

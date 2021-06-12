@@ -2,7 +2,7 @@ node[:isucon11_repository] = '/home/isuadmin/src/isucon11-prior'
 
 execute 'rm -rf /home/isucon/src'
 
-execute "git clone --depth 1 github-isucon-net:isucon/isucon11-prior.git #{node[:isucon11_repository]}" do
+execute "git clone --depth 1 github.com:isucon/isucon11-prior.git #{node[:isucon11_repository]}" do
   user 'isuadmin'
   not_if "test -d #{node[:isucon11_repository]}"
 end
