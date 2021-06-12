@@ -55,7 +55,7 @@ export const SignupPage: VFC = () => {
                 <TextField label="Nickname" type="nickname" fullWidth required onChange={onChangeNickname} variant="outlined" />
               </Grid>
               <Grid item xs={12}>
-                <Button color="primary" variant="contained" type="submit" fullWidth>Sign in</Button>
+                <Button color="primary" variant="contained" type="submit" fullWidth>Sign up</Button>
               </Grid>
             </Grid>
           </form>

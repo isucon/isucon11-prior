@@ -104,6 +104,12 @@ func (s *Scenario) Load(parent context.Context, step *isucandar.BenchmarkStep) e
 			return
 		}
 
+		select {
+		case <-ctx.Done():
+			return
+		default:
+		}
+
 		schedules, err := ActionGetSchedules(ctx, step, s.StaffUser)
 		if err != nil {
 			step.AddError(err)
@@ -118,6 +124,12 @@ func (s *Scenario) Load(parent context.Context, step *isucandar.BenchmarkStep) e
 		}
 		if hasCapacity >= 6 {
 			return
+		}
+
+		select {
+		case <-ctx.Done():
+			return
+		default:
 		}
 
 		schedule, err := ActionCreateSchedule(ctx, step, s)
@@ -156,10 +168,15 @@ func (s *Scenario) Load(parent context.Context, step *isucandar.BenchmarkStep) e
 			step.AddError(err)
 			return
 		}
-		if err := ActionSignup(ctx, step, user); err != nil || user.ID == "" {
+		if err := ActionSignup(ctx, step, user); err != nil {
 			step.AddError(err)
 			return
 		}
+
+		if user.ID == "" {
+			return
+		}
+
 		if err := ActionLogin(ctx, step, user); err != nil {
 			step.AddError(err)
 			return
@@ -180,6 +197,12 @@ func (s *Scenario) Load(parent context.Context, step *isucandar.BenchmarkStep) e
 			if err := BrowserAccess(ctx, step, user, "/"); err != nil {
 				step.AddError(err)
 				continue
+			}
+
+			select {
+			case <-ctx.Done():
+				return
+			default:
 			}
 
 			// スケジュール一覧を見て
@@ -203,6 +226,12 @@ func (s *Scenario) Load(parent context.Context, step *isucandar.BenchmarkStep) e
 					continue
 				}
 
+				select {
+				case <-ctx.Done():
+					return
+				default:
+				}
+
 				// キャパが空いてて、取ってない予定なら抑えにかかる
 				rschedule, err := ActionGetSchedule(ctx, step, schedule.ID, user)
 				if err != nil {
@@ -211,6 +240,12 @@ func (s *Scenario) Load(parent context.Context, step *isucandar.BenchmarkStep) e
 				}
 				if rschedule.Capacity <= rschedule.Reserved {
 					continue
+				}
+
+				select {
+				case <-ctx.Done():
+					return
+				default:
 				}
 
 				if err := ActionCreateReservation(ctx, step, sschedule, user); err != nil {
@@ -231,14 +266,108 @@ func (s *Scenario) Load(parent context.Context, step *isucandar.BenchmarkStep) e
 	return nil
 }
 
-func (s *Scenario) Validation(ctx context.Context, step *isucandar.BenchmarkStep) error {
+func (s *Scenario) Validation(parent context.Context, step *isucandar.BenchmarkStep) error {
 	if s.NoLoad {
 		return nil
 	}
 
+	// 10 秒待つ
+	time.Sleep(10 * time.Second)
+
+	ctx, cancel := context.WithTimeout(parent, 30*time.Second)
+	defer cancel()
+
 	/*
-		TODO: 負荷走行後のデータ検証シナリオ
+		- スケジュール数の一致
+		- reservation の一致
 	*/
+	err := BrowserAccess(ctx, step, s.StaffUser, "/")
+	if err != nil {
+		return err
+	}
+
+	schedules, err := ActionGetAllSchedules(ctx, step, s.StaffUser)
+	if err != nil {
+		return err
+	}
+
+	if err := assertEqualInt(s.Schedules.Count(), len(schedules), "all-schedules.count"); err != nil {
+		step.AddError(err)
+	}
+
+	scheduleWorker, err := worker.NewWorker(func(ctx context.Context, i int) {
+		schedule := schedules[i]
+
+		sschedule := s.Schedules.GetByID(schedule.ID)
+		if sschedule == nil {
+			step.AddError(failure.NewError(ErrInvalid, fmt.Errorf("unknown schedule id: %s", schedule.ID)))
+			return
+		}
+
+		if err := assertEqualString(sschedule.Title, schedule.Title, "all-schedules.title"); err != nil {
+			step.AddError(err)
+		}
+
+		if err := assertEqualUint(sschedule.Capacity, schedule.Capacity, "all-schedules.capacity"); err != nil {
+			step.AddError(err)
+		}
+
+		if err := assertEqualInt(sschedule.Users.Count(), int(schedule.Reserved), "all-schedules.reserved"); err != nil {
+			step.AddError(err)
+		}
+
+		resp, err := ActionGetSchedule(ctx, step, schedule.ID, s.StaffUser)
+		if err != nil {
+			step.AddError(err)
+			return
+		}
+
+		if err := assertEqualString(sschedule.Title, resp.Title, "schedule.title"); err != nil {
+			step.AddError(err)
+		}
+
+		if err := assertEqualUint(sschedule.Capacity, resp.Capacity, "schedule.capacity"); err != nil {
+			step.AddError(err)
+		}
+
+		if err := assertEqualInt(sschedule.Users.Count(), int(resp.Reserved), "schedule.reserved"); err != nil {
+			step.AddError(err)
+		}
+
+		if err := assertEqualInt(sschedule.Users.Count(), len(resp.Reservations), "schedule.reservations.count"); err != nil {
+			step.AddError(err)
+		}
+
+		if len(resp.Reservations) > int(sschedule.Capacity) {
+			step.AddError(failure.NewError(ErrInvalid, fmt.Errorf("overbooking at %s", sschedule.ID)))
+		}
+
+		revMap := map[string]string{}
+		for _, reservation := range resp.Reservations {
+			suser := sschedule.Users.GetByID(reservation.UserID)
+			if suser == nil {
+				step.AddError(failure.NewError(ErrInvalid, fmt.Errorf("unknown user on reservations: %s", reservation.UserID)))
+				continue
+			}
+
+			if revID, ok := revMap[suser.ID]; ok {
+				step.AddError(failure.NewError(ErrInvalid, fmt.Errorf("duplication reservation on schedule(id: %s) / reservation(id: %s)", sschedule.ID, revID)))
+			}
+			revMap[suser.ID] = reservation.ID
+
+			if err := assertEqualString(suser.Email, reservation.User.Email, "reservation.user.email"); err != nil {
+				step.AddError(err)
+			}
+
+			if err := assertEqualString(suser.Nickname, reservation.User.Nickname, "reservation.user.nickname"); err != nil {
+				step.AddError(err)
+			}
+		}
+	}, worker.WithLoopCount(int32(len(schedules))))
+	if err != nil {
+		return err
+	}
+	scheduleWorker.Process(ctx)
 
 	return nil
 }

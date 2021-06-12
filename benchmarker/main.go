@@ -108,18 +108,23 @@ func sendResult(s *Scenario, result *isucandar.BenchmarkResult, finish bool) boo
 		switch true {
 		case isCritical:
 			passed = false
-			reason = "Critical error"
+			reason = "fail: critical"
 		case isTimeout:
 			timeoutCount++
 		case isDeduction:
-			deduction++
+			if isValidation(err) {
+				deduction += 50
+			} else {
+				deduction++
+			}
 		}
 	}
 	deductionTotal := deduction + timeoutCount/10
 
 	score := scoreRaw - deductionTotal
-	if score <= 0 {
+	if score <= 0 && passed {
 		passed = false
+		reason = "fail: score"
 	}
 
 	ContestantLogger.Printf("score: %d(%d - %d) : %s", score, scoreRaw, deductionTotal, reason)

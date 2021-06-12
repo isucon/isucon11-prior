@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"net/url"
 	"strconv"
 	"strings"
@@ -99,12 +100,12 @@ func ActionSignup(ctx context.Context, step *isucandar.BenchmarkStep, u *User) e
 		step.AddError(err)
 		hasError = true
 	} else {
-		if err := assertEqualString(u.Email, jsonResp.Email); err != nil {
+		if err := assertEqualString(u.Email, jsonResp.Email, "signup.email"); err != nil {
 			step.AddError(err)
 			hasError = true
 		}
 
-		if err := assertEqualString(u.Nickname, jsonResp.Nickname); err != nil {
+		if err := assertEqualString(u.Nickname, jsonResp.Nickname, "signup.nickname"); err != nil {
 			step.AddError(err)
 			hasError = true
 		}
@@ -220,11 +221,11 @@ func ActionLogin(ctx context.Context, step *isucandar.BenchmarkStep, u *User) er
 			step.AddError(err)
 			hasError = true
 		} else {
-			if err := assertEqualString(u.Email, jsonResp.Email); err != nil {
+			if err := assertEqualString(u.Email, jsonResp.Email, "login.email"); err != nil {
 				step.AddError(err)
 				hasError = true
 			}
-			if err := assertEqualString(u.Nickname, jsonResp.Nickname); err != nil {
+			if err := assertEqualString(u.Nickname, jsonResp.Nickname, "login.nickname"); err != nil {
 				step.AddError(err)
 				hasError = true
 			}
@@ -304,11 +305,14 @@ func ActionCreateSchedule(ctx context.Context, step *isucandar.BenchmarkStep, s 
 		return nil, err
 	}
 
+	if !user.Staff {
+		if err := assertStatusCode(res, 401); err != nil {
+			return nil, err
+		}
+	}
+
 	hasError := false
-	// なんで return せずに AddError しているかというと
-	// なるべく多くの検査項目をチェックしてあげて競技者にエラーを返さないと
-	// ステータスコード直したら実は Content Type が狂ってた……みたいなバグ探しのベンチ試行回数が無駄に増えるので
-	// なるべくたくさんチェックしてあげたいね、という意図です
+
 	if err := assertStatusCode(res, 200); err != nil {
 		step.AddError(err)
 		hasError = true
@@ -324,11 +328,11 @@ func ActionCreateSchedule(ctx context.Context, step *isucandar.BenchmarkStep, s 
 		step.AddError(err)
 		hasError = true
 	} else {
-		if err := assertEqualString(jsonResp.Title, schedule.Title); err != nil {
+		if err := assertEqualString(jsonResp.Title, schedule.Title, "create-schedule.title"); err != nil {
 			step.AddError(err)
 			hasError = true
 		}
-		if err := assertEqualUint(jsonResp.Capacity, schedule.Capacity); err != nil {
+		if err := assertEqualUint(jsonResp.Capacity, schedule.Capacity, "create-schedule.capacity"); err != nil {
 			step.AddError(err)
 			hasError = true
 		}
@@ -352,6 +356,33 @@ type SchedulesResponseItem struct {
 
 func ActionGetSchedules(ctx context.Context, step *isucandar.BenchmarkStep, user *User) ([]*SchedulesResponseItem, error) {
 	req, err := user.Agent.GET("/api/schedules")
+	if err != nil {
+		return nil, failure.NewError(ErrCritical, err)
+	}
+
+	res, err := user.Agent.Do(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := assertStatusCode(res, 200); err != nil {
+		step.AddError(err)
+	}
+
+	if err := assertContentType(res, "application/json"); err != nil {
+		step.AddError(err)
+	}
+
+	schedules := []*SchedulesResponseItem{}
+	if err := assertJSONBody(res, &schedules); err != nil {
+		step.AddError(err)
+	}
+
+	return schedules, nil
+}
+
+func ActionGetAllSchedules(ctx context.Context, step *isucandar.BenchmarkStep, user *User) ([]*SchedulesResponseItem, error) {
+	req, err := user.Agent.GET("/api/schedules?reserved=1")
 	if err != nil {
 		return nil, failure.NewError(ErrCritical, err)
 	}
@@ -414,6 +445,15 @@ func ActionGetSchedule(ctx context.Context, step *isucandar.BenchmarkStep, id st
 	schedule := &ScheduleResponse{}
 	if err := assertJSONBody(res, schedule); err != nil {
 		step.AddError(err)
+	} else {
+		if !user.Staff {
+			for _, rev := range schedule.Reservations {
+				if rev.User.Email != "" {
+					step.AddError(failure.NewError(ErrSecurityIncident, fmt.Errorf("Leakage of email addresses at /schedules/%s", id)))
+					break
+				}
+			}
+		}
 	}
 
 	return schedule, nil
@@ -445,6 +485,8 @@ func ActionCreateReservation(ctx context.Context, step *isucandar.BenchmarkStep,
 		user.mu.Lock()
 		user.ReservedScheduleIDs = append(user.ReservedScheduleIDs, schedule.ID)
 		user.mu.Unlock()
+
+		schedule.Users.Add(user)
 
 		step.AddScore(ScoreCreateReservation)
 	}

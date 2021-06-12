@@ -35,7 +35,7 @@ build: bin/benchmarker
 
 .PHONY: run
 run: build
-	./bin/benchmarker -admin
+	@./bin/benchmarker
 
 .PHONY: clean
 clean:

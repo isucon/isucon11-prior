@@ -10,13 +10,15 @@ import (
 
 // Critical Errors
 var (
-	ErrCritical failure.StringCode = "critical"
+	ErrCritical         failure.StringCode = "critical"
+	ErrSecurityIncident failure.StringCode = "security incident"
 )
 
 func isCritical(err error) bool {
 	// Prepare step でのエラーはすべて Critical の扱い
 	return failure.IsCode(err, isucandar.ErrPrepare) ||
-		failure.IsCode(err, ErrCritical)
+		failure.IsCode(err, ErrCritical) ||
+		failure.IsCode(err, ErrSecurityIncident)
 }
 
 var (
@@ -48,4 +50,8 @@ func isTimeout(err error) bool {
 		return true
 	}
 	return failure.IsCode(err, failure.TimeoutErrorCode)
+}
+
+func isValidation(err error) bool {
+	return failure.IsCode(err, isucandar.ErrValidation)
 }

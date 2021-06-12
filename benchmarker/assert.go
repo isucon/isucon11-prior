@@ -23,7 +23,7 @@ func assertInitialize(step *isucandar.BenchmarkStep, res *http.Response) {
 
 func assertStatusCode(res *http.Response, code int) error {
 	if res.StatusCode != code {
-		return failure.NewError(ErrInvalidStatusCode, fmt.Errorf("Invalid status code: %d (expected: %d) at %s", res.StatusCode, code, res.Request.URL.Path))
+		return failure.NewError(ErrInvalidStatusCode, fmt.Errorf("invalid status code: %d (expected: %d) at %s", res.StatusCode, code, res.Request.URL.Path))
 	}
 	return nil
 }
@@ -31,7 +31,7 @@ func assertStatusCode(res *http.Response, code int) error {
 func assertContentType(res *http.Response, contentType string) error {
 	actual := res.Header.Get("Content-Type")
 	if !strings.HasPrefix(actual, contentType) {
-		return failure.NewError(ErrInvalidContentType, fmt.Errorf("Invalid content type: %s (expected: %s)", actual, contentType))
+		return failure.NewError(ErrInvalidContentType, fmt.Errorf("invalid content type: %s (expected: %s) at %s", actual, contentType, res.Request.URL.Path))
 	}
 	return nil
 }
@@ -41,7 +41,7 @@ func assertJSONBody(res *http.Response, body interface{}) error {
 	defer res.Body.Close()
 
 	if err := decoder.Decode(body); err != nil {
-		return failure.NewError(ErrInvalidJSON, fmt.Errorf("Invalid JSON"))
+		return failure.NewError(ErrInvalidJSON, fmt.Errorf("invalid JSON at %s", res.Request.URL.Path))
 	}
 	return nil
 }
@@ -67,16 +67,23 @@ func assertChecksum(res *http.Response) error {
 	return nil
 }
 
-func assertEqualString(expected, actual string) error {
+func assertEqualString(expected, actual string, tag string) error {
 	if expected != actual {
-		return failure.NewError(ErrMissmatch, fmt.Errorf("missmatch: %s != expected %s", actual, expected))
+		return failure.NewError(ErrMissmatch, fmt.Errorf("%s %s != expected %s", tag, actual, expected))
 	}
 	return nil
 }
 
-func assertEqualUint(expected, actual uint) error {
+func assertEqualInt(expected, actual int, tag string) error {
 	if expected != actual {
-		return failure.NewError(ErrMissmatch, fmt.Errorf("missmatch: %d != expected %d", actual, expected))
+		return failure.NewError(ErrMissmatch, fmt.Errorf("%s %d != expected %d", tag, actual, expected))
+	}
+	return nil
+}
+
+func assertEqualUint(expected, actual uint, tag string) error {
+	if expected != actual {
+		return failure.NewError(ErrMissmatch, fmt.Errorf("%s %d != expected %d", tag, actual, expected))
 	}
 	return nil
 }

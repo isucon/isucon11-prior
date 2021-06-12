@@ -66,12 +66,14 @@ func (u *User) IsEnoughNeeds() bool {
 
 type Users struct {
 	mu    sync.Mutex
+	idMap map[string]*User
 	slice []*User
 }
 
 func newUsers() *Users {
 	return &Users{
 		mu:    sync.Mutex{},
+		idMap: map[string]*User{},
 		slice: []*User{},
 	}
 }
@@ -79,6 +81,7 @@ func newUsers() *Users {
 func (a *Users) Add(u *User) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
+	a.idMap[u.ID] = u
 	a.slice = append(a.slice, u)
 }
 
@@ -86,6 +89,15 @@ func (a *Users) Get(idx int) *User {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 	return a.slice[idx]
+}
+
+func (a *Users) GetByID(id string) *User {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	if u, ok := a.idMap[id]; ok {
+		return u
+	}
+	return nil
 }
 
 func (a *Users) Count() int {
@@ -99,6 +111,8 @@ type Schedule struct {
 	Title     string
 	Capacity  uint
 	CreatedAt time.Time
+
+	Users *Users
 }
 
 func newSchedule() *Schedule {
@@ -107,17 +121,20 @@ func newSchedule() *Schedule {
 		Title:     randomTitle(),
 		Capacity:  uint(randomCapacity()),
 		CreatedAt: time.Unix(0, 0),
+		Users:     newUsers(),
 	}
 }
 
 type Schedules struct {
 	mu    sync.Mutex
+	idMap map[string]*Schedule
 	slice []*Schedule
 }
 
 func newSchedules() *Schedules {
 	return &Schedules{
 		mu:    sync.Mutex{},
+		idMap: map[string]*Schedule{},
 		slice: []*Schedule{},
 	}
 }
@@ -125,6 +142,7 @@ func newSchedules() *Schedules {
 func (a *Schedules) Add(u *Schedule) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
+	a.idMap[u.ID] = u
 	a.slice = append(a.slice, u)
 }
 
@@ -138,10 +156,8 @@ func (a *Schedules) GetByID(id string) *Schedule {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 
-	for _, s := range a.slice {
-		if s.ID == id {
-			return s
-		}
+	if s, ok := a.idMap[id]; ok {
+		return s
 	}
 	return nil
 }
