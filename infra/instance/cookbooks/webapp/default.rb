@@ -7,10 +7,11 @@ execute 'install webapp' do
   command <<-EOS
   rm -rf /home/isucon/webapp
   cp -a /home/isucon/src/github.com/isucon/isucon11-sc/webapp /home/isucon/webapp
+  cp /home/isucon/src/github.com/isucon/isucon11-sc/REVISION /home/isucon/webapp/REVISION
   EOS
   user 'isucon'
   cwd '/home/isucon'
-  not_if 'test -d /home/isucon/webapp && test $(cat /home/isucon/webapp/REVISION) = $(cat /home/isucon/src/github.com/isucon/isucon11-sc/webapp/REVISION)'
+  not_if 'test -d /home/isucon/webapp && test -f /home/isucon/webapp/REVISION && test $(cat /home/isucon/webapp/REVISION) = $(cat /home/isucon/src/github.com/isucon/isucon11-sc/webapp/REVISION)'
 
   notifies :run, 'execute[setup db]', :immediately
   notifies :run, 'execute[bundle install]', :immediately

@@ -1,13 +1,16 @@
 package main
 
 import (
+	"context"
+	"net"
+
 	"github.com/isucon/isucandar"
 	"github.com/isucon/isucandar/failure"
 )
 
 // Critical Errors
 var (
-	ErrCritical failure.StringCode = "CRITICAL"
+	ErrCritical failure.StringCode = "critical"
 )
 
 func isCritical(err error) bool {
@@ -17,12 +20,12 @@ func isCritical(err error) bool {
 }
 
 var (
-	ErrInvalidStatusCode  failure.StringCode = "INVALID STATUS CODE"
-	ErrInvalidContentType failure.StringCode = "INVALID CONTENT TYPE"
-	ErrInvalidJSON        failure.StringCode = "INVALID JSON"
-	ErrMissmatch          failure.StringCode = "MISSMATCH"
-	ErrInvalidAsset       failure.StringCode = "INVALID ASSET"
-	ErrInvalid            failure.StringCode = "Invalid"
+	ErrInvalidStatusCode  failure.StringCode = "status code"
+	ErrInvalidContentType failure.StringCode = "content type"
+	ErrInvalidJSON        failure.StringCode = "json"
+	ErrMissmatch          failure.StringCode = "missmatch"
+	ErrInvalidAsset       failure.StringCode = "asset"
+	ErrInvalid            failure.StringCode = "invalid"
 )
 
 func isDeduction(err error) bool {
@@ -34,6 +37,15 @@ func isDeduction(err error) bool {
 		failure.IsCode(err, ErrInvalid)
 }
 
-var (
-	ErrTimeout failure.StringCode = "Timeout"
-)
+func isTimeout(err error) bool {
+	var nerr net.Error
+	if failure.As(err, &nerr) {
+		if nerr.Timeout() || nerr.Temporary() {
+			return true
+		}
+	}
+	if failure.Is(err, context.DeadlineExceeded) {
+		return true
+	}
+	return failure.IsCode(err, failure.TimeoutErrorCode)
+}

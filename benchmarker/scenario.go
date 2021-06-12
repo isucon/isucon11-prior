@@ -99,7 +99,7 @@ func (s *Scenario) Load(parent context.Context, step *isucandar.BenchmarkStep) e
 		wg.Add(1)
 		defer wg.Done()
 
-		err := BrowserAccess(ctx, s.StaffUser, "/")
+		err := BrowserAccess(ctx, step, s.StaffUser, "/")
 		if err != nil {
 			return
 		}
@@ -152,7 +152,7 @@ func (s *Scenario) Load(parent context.Context, step *isucandar.BenchmarkStep) e
 			return
 		}
 
-		if err := BrowserAccess(ctx, user, "/"); err != nil {
+		if err := BrowserAccess(ctx, step, user, "/"); err != nil {
 			step.AddError(err)
 			return
 		}
@@ -177,7 +177,7 @@ func (s *Scenario) Load(parent context.Context, step *isucandar.BenchmarkStep) e
 			}
 
 			// リロードして
-			if err := BrowserAccess(ctx, user, "/"); err != nil {
+			if err := BrowserAccess(ctx, step, user, "/"); err != nil {
 				step.AddError(err)
 				continue
 			}
@@ -204,10 +204,13 @@ func (s *Scenario) Load(parent context.Context, step *isucandar.BenchmarkStep) e
 				}
 
 				// キャパが空いてて、取ってない予定なら抑えにかかる
-				_, err := ActionGetSchedule(ctx, step, schedule.ID, user)
+				rschedule, err := ActionGetSchedule(ctx, step, schedule.ID, user)
 				if err != nil {
 					step.AddError(err)
 					break
+				}
+				if rschedule.Capacity <= rschedule.Reserved {
+					continue
 				}
 
 				if err := ActionCreateReservation(ctx, step, sschedule, user); err != nil {

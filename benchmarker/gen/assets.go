@@ -51,7 +51,6 @@ func glob(v *Variable, prefix string) {
 			continue
 		}
 
-		log.Printf("%s", match)
 		filename := strings.TrimPrefix(match, rootPrefix+"/")
 		v.Hash["/"+filename] = hash(match)
 	}

@@ -2,8 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
-	"net"
 	"net/url"
 	"strconv"
 	"strings"
@@ -15,7 +13,7 @@ import (
 	"github.com/isucon/isucandar/worker"
 )
 
-func BrowserAccess(ctx context.Context, user *User, rpath string) error {
+func BrowserAccess(ctx context.Context, step *isucandar.BenchmarkStep, user *User, rpath string) error {
 	req, err := user.Agent.GET(rpath)
 	if err != nil {
 		return failure.NewError(ErrCritical, err)
@@ -27,7 +25,9 @@ func BrowserAccess(ctx context.Context, user *User, rpath string) error {
 	}
 
 	if err := assertStatusCode(res, 200); err != nil {
-		return err
+		if res.StatusCode != 304 {
+			return err
+		}
 	}
 
 	resources, perr := user.Agent.ProcessHTML(ctx, res, res.Body)
@@ -37,13 +37,8 @@ func BrowserAccess(ctx context.Context, user *User, rpath string) error {
 
 	for _, resource := range resources {
 		if resource.Error != nil {
-			var nerr net.Error
-			if failure.As(resource.Error, &nerr) {
-				if nerr.Timeout() || nerr.Temporary() {
-					return failure.NewError(ErrTimeout, err)
-				}
-			}
-			return failure.NewError(ErrInvalidAsset, fmt.Errorf("リソースの取得に失敗しました: %s: %v", resource.Request.URL.Path, resource.Error))
+			step.AddError(failure.NewError(ErrInvalidAsset, resource.Error))
+			continue
 		}
 
 		if resource.Response.StatusCode == 304 {
@@ -51,11 +46,11 @@ func BrowserAccess(ctx context.Context, user *User, rpath string) error {
 		}
 
 		if err := assertStatusCode(resource.Response, 200); err != nil {
-			return err
+			step.AddError(failure.NewError(ErrInvalidAsset, err))
 		}
 
 		if err := assertChecksum(resource.Response); err != nil {
-			return err
+			step.AddError(err)
 		}
 	}
 

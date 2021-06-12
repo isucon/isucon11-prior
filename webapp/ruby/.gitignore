@@ -1,3 +1,5 @@
 /coverage
 /.envrc
 /vendor
+/tmp/*
+!/tmp/.keep

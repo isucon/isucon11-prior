@@ -17,12 +17,11 @@ import (
 
 	"github.com/isucon/isucandar"
 	"github.com/isucon/isucandar/agent"
-	"github.com/isucon/isucandar/failure"
 )
 
 var (
 	REVISION           string
-	targetAddress      string
+	targetHost         string
 	profileFile        string
 	hostAdvertise      string
 	tlsCertificatePath string
@@ -32,6 +31,7 @@ var (
 	noLoad             bool
 	promOut            string
 	showVersion        bool
+	progress           bool
 	parallelism        int
 )
 
@@ -47,6 +47,7 @@ func init() {
 	agent.DefaultTLSConfig.InsecureSkipVerify = false
 
 	isAdmin := false
+	flag.StringVar(&targetHost, "target", os.Getenv("BENCHMARKER_TARGET_HOST"), "ex: 127.0.0.1:9292")
 	flag.StringVar(&profileFile, "profile", "", "ex: cpu.out")
 	flag.StringVar(&hostAdvertise, "host-advertise", "local.t.isucon.dev", "hostname to advertise against target")
 	flag.StringVar(&tlsCertificatePath, "tls-cert", "../secrets/cert.pem", "path to TLS certificate for a push service")
@@ -56,6 +57,7 @@ func init() {
 	flag.StringVar(&promOut, "prom-out", "", "Prometheus textfile output path")
 	flag.BoolVar(&showVersion, "version", false, "show version and exit 1")
 	flag.IntVar(&parallelism, "parallelism", 20, "parallelism count")
+	flag.BoolVar(&progress, "progress", false, "show score in progress")
 	flag.BoolVar(&isAdmin, "admin", false, "administrator mode")
 
 	timeoutDuration := ""
@@ -76,8 +78,8 @@ func init() {
 
 func checkError(err error) (critical bool, timeout bool, deduction bool) {
 	critical = isCritical(err)
-	timeout = false // TODO: リクエストタイムアウト(ある程度の数許容するかも)
-	deduction = isDeduction(err)
+	timeout = isTimeout(err)
+	deduction = !timeout && isDeduction(err)
 
 	return
 }
@@ -113,10 +115,15 @@ func sendResult(s *Scenario, result *isucandar.BenchmarkResult, finish bool) boo
 			deduction++
 		}
 	}
+	deductionTotal := deduction + timeoutCount/10
 
-	score := scoreRaw - deduction
+	score := scoreRaw - deductionTotal
+	if score <= 0 {
+		passed = false
+	}
 
-	ContestantLogger.Printf("score: %d : %s", score, reason)
+	ContestantLogger.Printf("score: %d(%d - %d) : %s", score, scoreRaw, deductionTotal, reason)
+	ContestantLogger.Printf("deduction: %d / timeout: %d", deduction, timeoutCount)
 
 	return passed
 }
@@ -156,8 +163,8 @@ func main() {
 		pprof.StartCPUProfile(fs)
 		defer pprof.StopCPUProfile()
 	}
-	if targetAddress == "" {
-		targetAddress = "localhost"
+	if targetHost == "" {
+		targetHost = "localhost"
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -168,7 +175,7 @@ func main() {
 	if useTLS {
 		scheme = "https"
 	}
-	s.BaseURL = fmt.Sprintf("%s://%s/", scheme, targetAddress)
+	s.BaseURL = fmt.Sprintf("%s://%s/", scheme, targetHost)
 	s.NoLoad = noLoad
 	s.Parallelism = int32(parallelism)
 
@@ -181,11 +188,10 @@ func main() {
 
 	errorCount := int64(0)
 	b.OnError(func(err error, step *isucandar.BenchmarkStep) {
-		if failure.IsCode(err, failure.TimeoutErrorCode) {
+		critical, timeout, deduction := checkError(err)
+		if timeout {
 			return
 		}
-
-		critical, _, deduction := checkError(err)
 
 		if critical || (deduction && atomic.AddInt64(&errorCount, 1) >= 100) {
 			step.Cancel()
@@ -197,8 +203,9 @@ func main() {
 	b.AddScenario(s)
 
 	wg := sync.WaitGroup{}
+
 	b.Load(func(ctx context.Context, step *isucandar.BenchmarkStep) error {
-		if s.NoLoad {
+		if s.NoLoad || !progress {
 			return nil
 		}
 

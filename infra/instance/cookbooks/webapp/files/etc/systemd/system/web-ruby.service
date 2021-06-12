@@ -4,7 +4,7 @@ After=network.target mysql.service
 
 [Service]
 User=isucon
-ExecStart=/home/isucon/.x bundle exec rackup -o 0.0.0.0 -p 9292
+ExecStart=/home/isucon/.x bundle exec puma -C config/puma.rb
 WorkingDirectory=/home/isucon/webapp/ruby
 EnvironmentFile=/home/isucon/env
 TimeoutStopSec=1

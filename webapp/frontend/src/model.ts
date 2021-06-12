@@ -2,6 +2,7 @@ export interface User {
   id: string;
   email: string;
   nickname: string;
+  staff: boolean;
   created_at: string;
 }
 

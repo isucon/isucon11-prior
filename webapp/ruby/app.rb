@@ -6,6 +6,8 @@ require_relative 'db'
 Time.zone = 'UTC'
 
 class App < Sinatra::Base
+  enable :logging
+
   set :session_secret, 'tagomoris'
   set :sessions, key: 'session_isucon2021_prior', expire_after: 3600
   set :show_exceptions, false
@@ -19,15 +21,6 @@ class App < Sinatra::Base
 
     def transaction(name = :default, &block)
       DB.transaction(name, &block)
-    end
-
-    def get_config(key)
-      result = db.xquery('SELECT `value` FROM `config` WHERE `key` = ? LIMIT 1', key).first
-      if result
-        return result[:value]
-      else
-        return nil
-      end
     end
 
     def generate_id(table, tx)
@@ -82,11 +75,6 @@ class App < Sinatra::Base
       tx.query('TRUNCATE `reservations`')
       tx.query('TRUNCATE `schedules`')
       tx.query('TRUNCATE `users`')
-      tx.query('TRUNCATE `config`')
-
-      params.each_pair do |key, value|
-        tx.xquery('INSERT INTO `config` (`key`, `value`) (?, ?)', key, value)
-      end
 
       id = generate_id('users', tx)
       tx.xquery('INSERT INTO `users` (`id`, `email`, `nickname`, `staff`, `created_at`) VALUES (?, ?, ?, true, NOW(6))', id, 'isucon2021_prior@isucon.net', 'isucon')
@@ -128,16 +116,6 @@ class App < Sinatra::Base
       session[:user_id] = nil
       halt 403, JSON.generate({ error: 'login failed' })
     end
-  end
-
-  get '/api/config' do
-    config = {}
-
-    db.query('SELECT `key` FROM `config`').each do |row|
-      config[row[:key]] = get_config(row[:key])
-    end
-
-    json(config)
   end
 
   post '/api/schedules' do

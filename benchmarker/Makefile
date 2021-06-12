@@ -33,6 +33,10 @@ all: build
 .PHONY: build
 build: bin/benchmarker
 
+.PHONY: run
+run: build
+	./bin/benchmarker -admin
+
 .PHONY: clean
 clean:
 	@$(RM) -r bin

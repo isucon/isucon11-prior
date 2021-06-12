@@ -34,7 +34,7 @@ func randomTitle() string {
 }
 
 func randomCapacity() int {
-	return 30 + rand.Intn(100)
+	return 1 // 30 + rand.Intn(100)
 }
 
 var randomDateCount int32 = 0
