@@ -312,8 +312,8 @@ func (s *Scenario) Validation(parent context.Context, step *isucandar.BenchmarkS
 			step.AddError(err)
 		}
 
-		if err := assertEqualInt(sschedule.Users.Count(), int(schedule.Reserved), "all-schedules.reserved"); err != nil {
-			step.AddError(err)
+		if sschedule.Users.Count() > int(schedule.Reserved) {
+			step.AddError(failure.NewError(ErrMissmatch, fmt.Errorf("schedule.reserved %d != %d", schedule.Reserved, sschedule.Users.Count())))
 		}
 
 		resp, err := ActionGetSchedule(ctx, step, schedule.ID, s.StaffUser)
@@ -330,8 +330,8 @@ func (s *Scenario) Validation(parent context.Context, step *isucandar.BenchmarkS
 			step.AddError(err)
 		}
 
-		if err := assertEqualInt(sschedule.Users.Count(), int(resp.Reserved), "schedule.reserved"); err != nil {
-			step.AddError(err)
+		if sschedule.Users.Count() > int(resp.Reserved) {
+			step.AddError(failure.NewError(ErrMissmatch, fmt.Errorf("schedule.reserved %d != %d", resp.Reserved, sschedule.Users.Count())))
 		}
 
 		if err := assertEqualInt(sschedule.Users.Count(), len(resp.Reservations), "schedule.reservations.count"); err != nil {
