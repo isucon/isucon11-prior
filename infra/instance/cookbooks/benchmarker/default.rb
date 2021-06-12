@@ -6,6 +6,6 @@ execute 'build benchmarker' do
   install -m 755 ./bin/benchmarker /home/isucon/bin/benchmarker
   EOS
   user 'isucon'
-  cwd '/home/isucon/src/github.com/isucon/isucon11-sc/benchmarker'
-  not_if 'test -x /home/isucon/bin/benchmarker && test $(/home/isucon/bin/benchmarker -version) = $(cat /home/isucon/src/github.com/isucon/isucon11-sc/REVISION)'
+  cwd '/home/isucon/src/github.com/isucon/isucon11-prior/benchmarker'
+  not_if 'test -x /home/isucon/bin/benchmarker && test $(/home/isucon/bin/benchmarker -version) = $(cat /home/isucon/src/github.com/isucon/isucon11-prior/REVISION)'
 end

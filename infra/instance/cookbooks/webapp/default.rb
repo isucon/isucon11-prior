@@ -6,12 +6,12 @@ include_cookbook 'repository'
 execute 'install webapp' do
   command <<-EOS
   rm -rf /home/isucon/webapp
-  cp -a /home/isucon/src/github.com/isucon/isucon11-sc/webapp /home/isucon/webapp
-  cp /home/isucon/src/github.com/isucon/isucon11-sc/REVISION /home/isucon/webapp/REVISION
+  cp -a #{node[:isucon11_repository]}/webapp /home/isucon/webapp
+  cp #{node[:isucon11_repository]}/REVISION /home/isucon/webapp/REVISION
+  chown -r isucon:isucon /home/isucon/webapp/REVISION
   EOS
-  user 'isucon'
   cwd '/home/isucon'
-  not_if 'test -d /home/isucon/webapp && test -f /home/isucon/webapp/REVISION && test $(cat /home/isucon/webapp/REVISION) = $(cat /home/isucon/src/github.com/isucon/isucon11-sc/webapp/REVISION)'
+  not_if "test -d /home/isucon/webapp && test -f /home/isucon/webapp/REVISION && test $(cat /home/isucon/webapp/REVISION) = $(cat #{node[:isucon11_repository]}/REVISION)"
 
   notifies :run, 'execute[setup db]', :immediately
   notifies :run, 'execute[bundle install]', :immediately

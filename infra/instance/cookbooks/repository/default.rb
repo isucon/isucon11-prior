@@ -1,6 +1,10 @@
-execute 'git clone --depth 1 github-isucon-net:isucon/isucon11-sc.git /home/isucon/src/github.com/isucon/isucon11-sc' do
-  user 'isucon'
-  not_if 'test -d /home/isucon/src/github.com/isucon/isucon11-sc'
+node[:isucon11_repository] = '/home/isuadmin/src/isucon11-prior'
+
+execute 'rm -rf /home/isucon/src'
+
+execute "git clone --depth 1 github-isucon-net:isucon/isucon11-prior.git #{node[:isucon11_repository]}" do
+  user 'isuadmin'
+  not_if "test -d #{node[:isucon11_repository]}"
 end
 
 execute 'update repository' do
@@ -12,9 +16,9 @@ execute 'update repository' do
   git pull origin
   git rev-parse HEAD > REVISION
   EOC
-  user 'isucon'
-  cwd '/home/isucon/src/github.com/isucon/isucon11-sc'
-  not_if 'cd /home/isucon/src/github.com/isucon/isucon11-sc && git fetch origin && test $(git rev-parse origin/main) = $(cat REVISION)'
+  user 'isuadmin'
+  cwd node[:isucon11_repository]
+  not_if "cd #{node[:isucon11_repository]} && git fetch origin && test $(git rev-parse origin/main) = $(cat REVISION)"
 
   notifies :run, 'execute[build frontend]', :immediately
 end
@@ -26,6 +30,6 @@ execute 'build frontend' do
   /home/isucon/.x yarn build
   rm -rf node_modules
   EOS
-  user 'isucon'
-  cwd '/home/isucon/src/github.com/isucon/isucon11-sc/webapp/frontend'
+  user 'isuadmin'
+  cwd "#{node[:isucon11_repository]}/webapp/frontend"
 end
