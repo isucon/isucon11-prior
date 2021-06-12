@@ -41,6 +41,8 @@ node[:machines].each do |machine|
   vm_data['guestOS'] = 'ubuntu-64'
   vm_data['numvcpus'] = node[:instance][:cpu]
   vm_data['sched.cpu.shares'] = node[:instance][:mhz]
+  vm_data['sched.cpu.max'] = node[:instance][:mhz]
+  vm_data['sched.cpu.min'] = 0
   vm_data['sched.cpu.units'] = 'mhz'
   vm_data['memSize'] = node[:instance][:mem]
 
