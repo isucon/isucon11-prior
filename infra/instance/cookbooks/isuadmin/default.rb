@@ -5,6 +5,19 @@ node.reverse_merge!({
 
 admins = (node[:admins] || [])
 
+user 'isuadmin' do
+  home '/home/isuadmin'
+  shell '/bin/bash'
+  create_home true
+end
+
+file '/etc/sudoers.d/isuadmin' do
+  content "isuadmin ALL=(ALL) NOPASSWD:ALL\n"
+  owner 'root'
+  group 'root'
+  mode '440'
+end
+
 file '/home/isuadmin/.ssh/authorized_keys' do
   owner 'isuadmin'
   group 'isuadmin'
