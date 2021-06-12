@@ -3,7 +3,7 @@ Bundler.require
 require 'yaml'
 require 'cli/ui'
 
-num = 50
+num = 10
 instances = YAML.load_file('instances.yml')[0...num]
 
 def benchmark(host)
