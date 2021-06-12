@@ -5,6 +5,13 @@ require "open3"
 require "logger"
 require 'net/http'
 require 'uri'
+require 'optparse'
+
+parallelism = 20
+
+opt = OptionParser.new
+opt.on('-p NUM', '--parallelism=NUM') {|v| parallelism = v.to_i }
+opt.parse!(ARGV)
 
 instances = YAML.load_file('instances.yml')
 node = YAML.load_file('node.yml')
@@ -19,7 +26,8 @@ File.write 'keys.yml', YAML.dump({ 'ssh_keys' => github_keys })
 
 File.write 'apply.yml', YAML.dump(node.merge({ 'ssh_keys' => github_keys }))
 
-Parallel.each(instances, in_processes: 50) do |ip|
+
+Parallel.each(instances, in_processes: parallelism) do |ip|
   name = '%03d' % ip.split('.').last.to_i
   logger = Logger.new(STDOUT, progname: name, datetime_format: "%H:%M:%S")
   logger.info("start")

@@ -26,7 +26,7 @@ export const App: VFC = () => {
       <AppBar position="static">
         <Container>
           <Toolbar>
-            <Typography variant="h6" className={classes.title}>ISUCON 2021 Prior</Typography>
+            <Typography variant="h6" className={classes.title}>ISUCON 11 Prior</Typography>
 
             { user ? (
               <Button color="inherit" onClick={() => logout()}>{user.nickname}</Button>

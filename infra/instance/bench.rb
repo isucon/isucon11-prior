@@ -2,8 +2,14 @@ require 'bundler/setup'
 Bundler.require
 require 'yaml'
 require 'cli/ui'
+require 'optparse'
 
 num = 10
+
+opt = OptionParser.new
+opt.on('-n NUM', '--num=NUM') {|v| num = v.to_i }
+opt.parse!(ARGV)
+
 instances = YAML.load_file('instances.yml')[0...num]
 
 def benchmark(host)

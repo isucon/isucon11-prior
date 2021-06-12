@@ -4,6 +4,13 @@ require 'yaml'
 require 'net/http'
 require 'net/ping'
 require 'cli/ui'
+require 'optparse'
+
+timeout = 10
+
+opt = OptionParser.new
+opt.on('-t NUM', '--timeout=NUM') {|v| timeout = v.to_i }
+opt.parse!(ARGV)
 
 instances = YAML.load_file('instances.yml')
 
@@ -42,7 +49,7 @@ CLI::UI::SpinGroup.new(auto_debrief: false).tap do |group|
   instances.each do |ip|
     group.add(ip) do |spinner|
       begin
-        Timeout.timeout(10) do
+        block = proc do
           spinner.update_title("#{ip}: ping")
           until ping?(ip)
             sleep 1
@@ -65,6 +72,8 @@ CLI::UI::SpinGroup.new(auto_debrief: false).tap do |group|
 
           spinner.update_title("#{ip}: OK")
         end
+
+        timeout > 0 ? Timeout.timeout(timeout, &block) : block.call
       rescue
         CLI::UI::Spinner::TASK_FAILED
       end

@@ -6,11 +6,9 @@ import (
 	"crypto/x509"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"runtime/pprof"
-	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -20,19 +18,15 @@ import (
 )
 
 var (
-	REVISION           string
-	targetHost         string
-	profileFile        string
-	hostAdvertise      string
-	tlsCertificatePath string
-	tlsKeyPath         string
-	useTLS             bool
-	exitStatusOnFail   bool
-	noLoad             bool
-	promOut            string
-	showVersion        bool
-	progress           bool
-	parallelism        int
+	REVISION         string
+	targetHost       string
+	profileFile      string
+	useTLS           bool
+	exitStatusOnFail bool
+	noLoad           bool
+	showVersion      bool
+	progress         bool
+	parallelism      int
 )
 
 func init() {
@@ -49,12 +43,9 @@ func init() {
 	isAdmin := false
 	flag.StringVar(&targetHost, "target", os.Getenv("BENCHMARKER_TARGET_HOST"), "ex: 127.0.0.1:9292")
 	flag.StringVar(&profileFile, "profile", "", "ex: cpu.out")
-	flag.StringVar(&hostAdvertise, "host-advertise", "local.t.isucon.dev", "hostname to advertise against target")
-	flag.StringVar(&tlsCertificatePath, "tls-cert", "../secrets/cert.pem", "path to TLS certificate for a push service")
-	flag.StringVar(&tlsKeyPath, "tls-key", "../secrets/key.pem", "path to private key of TLS certificate for a push service")
+	flag.BoolVar(&useTLS, "tls", false, "use tls")
 	flag.BoolVar(&exitStatusOnFail, "exit-status", false, "set exit status non-zero when a benchmark result is failing")
 	flag.BoolVar(&noLoad, "no-load", false, "exit on finished prepare")
-	flag.StringVar(&promOut, "prom-out", "", "Prometheus textfile output path")
 	flag.BoolVar(&showVersion, "version", false, "show version and exit 1")
 	flag.IntVar(&parallelism, "parallelism", 20, "parallelism count")
 	flag.BoolVar(&progress, "progress", false, "show score in progress")
@@ -131,25 +122,6 @@ func sendResult(s *Scenario, result *isucandar.BenchmarkResult, finish bool) boo
 	ContestantLogger.Printf("deduction: %d / timeout: %d", deduction, timeoutCount)
 
 	return passed
-}
-
-func writePromFile(promTags []string) {
-	if len(promOut) == 0 {
-		return
-	}
-
-	promOutNew := fmt.Sprintf("%s.new", promOut)
-	err := ioutil.WriteFile(promOutNew, []byte(strings.Join(promTags, "")), 0644)
-	if err != nil {
-		AdminLogger.Printf("Failed to write prom file: %s", err)
-		return
-	}
-	err = os.Rename(promOutNew, promOut)
-	if err != nil {
-		AdminLogger.Printf("Failed to write prom file: %s", err)
-		return
-	}
-
 }
 
 func main() {
