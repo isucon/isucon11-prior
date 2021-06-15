@@ -2,7 +2,7 @@ include_cookbook 'repository'
 
 execute 'build benchmarker' do
   command <<-EOS
-  /home/isucon/.x make build -B
+  RELEASE=1 /home/isucon/.x make build -B
   sudo install -m 755 ./bin/benchmarker /home/isucon/bin/benchmarker
   EOS
   user 'isuadmin'

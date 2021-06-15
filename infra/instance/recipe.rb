@@ -7,6 +7,7 @@ end
 
 Itamae::Recipe::EvalContext.include(RecipeHelper)
 
+include_cookbook 'apt'
 include_cookbook 'timezone'
 include_cookbook 'resolv'
 include_cookbook 'sshd'

@@ -13,19 +13,46 @@ opt = OptionParser.new
 opt.on('-p NUM', '--parallelism=NUM') {|v| parallelism = v.to_i }
 opt.parse!(ARGV)
 
-instances = YAML.load_file('instances.yml')
-node = YAML.load_file('node.yml')
+instances = YAML.load_file('instances.yml') rescue []
+contestants = YAML.load_file('contestants.yml') rescue []
+node = YAML.load_file('node.yml') rescue {}
+keys_cache = (YAML.load_file('keys.yml') rescue {})
+
+client = Net::HTTP.new('github.com', '443')
+client.use_ssl = true
 
 github_keys = {}
-github_users = ((node['admins'] || []) + (node['contestants'] || {}).values.flatten).uniq
+github_users = ((node['admins'] || []) + (node['contestants'] || {}).values.flatten + contestants).uniq
 github_users.each do |username|
-  keys = Net::HTTP.get(URI.parse("https://github.com/#{username}.keys")).strip.split("\n").map(&:strip).sort.uniq
-  github_keys[username] = keys.map { |k| "#{k} #{username}" }
+  username = username.strip
+  keys = (keys_cache['ssh_keys'] || {})[username] || []
+  if keys.empty?
+    puts "fetch #{username}'s keys..."
+    client.start do |http|
+      res = http.request_get("/#{username}.keys")
+      if res.code == '200'
+        keys = res.read_body.strip.split("\n").map(&:strip).sort.uniq.reject(&:empty?).map { |k| "#{k} #{username}" }
+        puts "WARNING: #{username}'s keys: empty" if keys.empty?
+      else
+        puts "WARNING: #{username}'s keys: #{res.code}"
+      end
+    end
+  end
+  github_keys[username] = keys
 end
 File.write 'keys.yml', YAML.dump({ 'ssh_keys' => github_keys })
 
+servers = node['contestants']
+server_names = servers.keys.sort
+contestants.each_with_index do |user, idx|
+  server = servers[server_names[idx]]
+  raise 'Server not found' if server.nil?
+  server << user
+end
+
 File.write 'apply.yml', YAML.dump(node.merge({ 'ssh_keys' => github_keys }))
 
+exit 0
 
 Parallel.each(instances, in_processes: parallelism) do |ip|
   name = '%03d' % ip.split('.').last.to_i

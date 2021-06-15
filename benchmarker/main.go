@@ -42,25 +42,29 @@ func init() {
 
 	isAdmin := false
 	flag.StringVar(&targetHost, "target", os.Getenv("BENCHMARKER_TARGET_HOST"), "ex: 127.0.0.1:9292")
-	flag.StringVar(&profileFile, "profile", "", "ex: cpu.out")
-	flag.BoolVar(&useTLS, "tls", false, "use tls")
+	flag.BoolVar(&useTLS, "tls", os.Getenv("BENCHMARKER_USE_TLS") == "1", "use tls")
 	flag.BoolVar(&exitStatusOnFail, "exit-status", false, "set exit status non-zero when a benchmark result is failing")
 	flag.BoolVar(&noLoad, "no-load", false, "exit on finished prepare")
 	flag.BoolVar(&showVersion, "version", false, "show version and exit 1")
 	flag.IntVar(&parallelism, "parallelism", 20, "parallelism count")
 	flag.BoolVar(&progress, "progress", false, "show score in progress")
 	flag.BoolVar(&isAdmin, "admin", false, "administrator mode")
+	if DEBUG {
+		flag.StringVar(&profileFile, "profile", "", "ex: cpu.out")
 
-	timeoutDuration := ""
-	flag.StringVar(&timeoutDuration, "timeout", "10s", "request timeout duration")
+		timeoutDuration := ""
+		flag.StringVar(&timeoutDuration, "timeout", "10s", "request timeout duration")
 
-	flag.Parse()
+		flag.Parse()
 
-	timeout, err := time.ParseDuration(timeoutDuration)
-	if err != nil {
-		panic(err)
+		timeout, err := time.ParseDuration(timeoutDuration)
+		if err != nil {
+			panic(err)
+		}
+		agent.DefaultRequestTimeout = timeout
+	} else {
+		flag.Parse()
 	}
-	agent.DefaultRequestTimeout = timeout
 
 	if !isAdmin {
 		AdminLogger = log.New(&Blackhole{}, "", log.Lmicroseconds)

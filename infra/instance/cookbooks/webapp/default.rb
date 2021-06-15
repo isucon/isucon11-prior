@@ -1,6 +1,12 @@
 include_cookbook 'systemd'
 include_cookbook 'repository'
 
+remote_file '/home/isucon/env' do
+  owner 'isucon'
+  group 'isucon'
+  mode  '0644'
+end
+
 execute 'install webapp' do
   command <<-EOS
   rm -rf /home/isucon/webapp
@@ -11,18 +17,32 @@ execute 'install webapp' do
   cwd '/home/isucon'
   not_if "test -d /home/isucon/webapp && test -f /home/isucon/webapp/REVISION && test $(cat /home/isucon/webapp/REVISION) = $(cat #{node[:isucon11_repository]}/REVISION)"
 
-  notifies :run, 'execute[setup db]', :immediately
+  notifies :run, 'execute[/home/isucon/webapp/tools/initdb]', :immediately
   notifies :run, 'execute[bundle install]', :immediately
   notifies :restart, 'service[web-ruby]'
 end
 
-execute 'setup db' do
+execute '/home/isucon/webapp/tools/initdb' do
   action :nothing
-  command <<-EOS
-  cat *.sql | mysql -uroot
-  EOS
-  cwd '/home/isucon/webapp/sql'
+  user 'isucon'
+  cwd '/home/isucon/webapp'
 end
+
+# systemctl
+
+remote_file '/etc/systemd/system/web-ruby.service' do
+  owner 'root'
+  group 'root'
+  mode  '0644'
+  notifies :run, 'execute[systemctl daemon-reload]', :immediately
+  notifies :restart, 'service[web-ruby]'
+end
+
+service 'web-ruby' do
+  action [:enable, :start]
+end
+
+# ruby
 
 execute 'bundle install' do
   action :nothing
@@ -42,22 +62,4 @@ execute '/home/isucon/.x bundle config set deployment false' do
   user 'isucon'
   cwd '/home/isucon/webapp/ruby'
   only_if 'cd /home/isucon/webapp/ruby && /home/isucon/.x bundle config get --parseable deployment | grep "deployment=true"'
-end
-
-remote_file '/home/isucon/env' do
-  owner 'isucon'
-  group 'isucon'
-  mode  '0644'
-end
-
-remote_file '/etc/systemd/system/web-ruby.service' do
-  owner 'root'
-  group 'root'
-  mode  '0644'
-  notifies :run, 'execute[systemctl daemon-reload]', :immediately
-  notifies :restart, 'service[web-ruby]'
-end
-
-service 'web-ruby' do
-  action [:enable, :start]
 end
