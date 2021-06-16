@@ -38,8 +38,19 @@ remote_file '/etc/systemd/system/web-ruby.service' do
   notifies :restart, 'service[web-ruby]'
 end
 
+remote_file '/etc/systemd/system/web-golang.service' do
+  owner 'root'
+  group 'root'
+  mode  '0644'
+  notifies :run, 'execute[systemctl daemon-reload]', :immediately
+end
+
 service 'web-ruby' do
   action [:enable, :start]
+end
+
+service 'web-golang' do
+  action [:disable, :stop]
 end
 
 # ruby
@@ -62,4 +73,12 @@ execute '/home/isucon/.x bundle config set deployment false' do
   user 'isucon'
   cwd '/home/isucon/webapp/ruby'
   only_if 'cd /home/isucon/webapp/ruby && /home/isucon/.x bundle config get --parseable deployment | grep "deployment=true"'
+end
+
+# golang
+
+execute '/home/isucon/.x make build' do
+  user 'isucon'
+  cwd '/home/isucon/webapp/golang'
+  only_if 'test -x /home/isucon/webapp/golang/bin/webapp'
 end

@@ -1,0 +1,13 @@
+[Unit]
+Description=web-golang
+After=network.target mysql.service
+
+[Service]
+User=isucon
+ExecStart=/home/isucon/.x ./bin/webapp
+WorkingDirectory=/home/isucon/webapp/golang
+EnvironmentFile=/home/isucon/env
+TimeoutStopSec=1
+
+[Install]
+WantedBy=multi-user.target
