@@ -52,8 +52,6 @@ end
 
 File.write 'apply.yml', YAML.dump(node.merge({ 'ssh_keys' => github_keys }))
 
-exit 0
-
 Parallel.each(instances, in_processes: parallelism) do |ip|
   name = '%03d' % ip.split('.').last.to_i
   logger = Logger.new(STDOUT, progname: name, datetime_format: "%H:%M:%S")

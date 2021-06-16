@@ -36,6 +36,10 @@ func BrowserAccess(ctx context.Context, step *isucandar.BenchmarkStep, user *Use
 		return failure.NewError(ErrCritical, err)
 	}
 
+	resStatusCodes := map[string]int{
+		"/esm/index.js": 200,
+	}
+
 	for _, resource := range resources {
 		if resource.Error != nil {
 			step.AddError(failure.NewError(ErrInvalidAsset, resource.Error))
@@ -46,8 +50,10 @@ func BrowserAccess(ctx context.Context, step *isucandar.BenchmarkStep, user *Use
 			continue
 		}
 
-		if err := assertStatusCode(resource.Response, 200); err != nil {
-			step.AddError(failure.NewError(ErrInvalidAsset, err))
+		if statusCode, ok := resStatusCodes[resource.Request.URL.Path]; ok {
+			if err := assertStatusCode(resource.Response, statusCode); err != nil {
+				step.AddError(failure.NewError(ErrInvalidAsset, err))
+			}
 		}
 
 		if err := assertChecksum(resource.Response); err != nil {
@@ -78,6 +84,7 @@ func ActionSignup(ctx context.Context, step *isucandar.BenchmarkStep, u *User) e
 		// さっさと Critical エラーにして早めにベンチマーカー止めてあげるのも優しさ
 		return failure.NewError(ErrCritical, err)
 	}
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
 	res, err := u.Agent.Do(ctx, req)
 	if err != nil {
@@ -193,6 +200,7 @@ func ActionLogin(ctx context.Context, step *isucandar.BenchmarkStep, u *User) er
 		// さっさと Critical エラーにして早めにベンチマーカー止めてあげるのも優しさ
 		return failure.NewError(ErrCritical, err)
 	}
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
 	res, err := u.Agent.Do(ctx, req)
 	if err != nil {
@@ -299,6 +307,7 @@ func ActionCreateSchedule(ctx context.Context, step *isucandar.BenchmarkStep, s 
 	if err != nil {
 		return nil, failure.NewError(ErrCritical, err)
 	}
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
 	res, err := user.Agent.Do(ctx, req)
 	if err != nil {
@@ -468,6 +477,7 @@ func ActionCreateReservation(ctx context.Context, step *isucandar.BenchmarkStep,
 	if err != nil {
 		return failure.NewError(ErrCritical, err)
 	}
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
 	res, err := user.Agent.Do(ctx, req)
 	if err != nil {
