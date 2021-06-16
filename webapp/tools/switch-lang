@@ -11,17 +11,17 @@ if [ "$LANG" = "" ]; then
 fi
 
 sudo systemctl stop web-golang
-sudo systemctl stop web-nodejs
-sudo systemctl stop web-perl
-sudo systemctl stop web-php
-sudo systemctl stop web-python
+# sudo systemctl stop web-nodejs
+# sudo systemctl stop web-perl
+# sudo systemctl stop web-php
+# sudo systemctl stop web-python
 sudo systemctl stop web-ruby
 
 sudo systemctl disable web-golang
-sudo systemctl disable web-nodejs
-sudo systemctl disable web-perl
-sudo systemctl disable web-php
-sudo systemctl disable web-python
+# sudo systemctl disable web-nodejs
+# sudo systemctl disable web-perl
+# sudo systemctl disable web-php
+# sudo systemctl disable web-python
 sudo systemctl disable web-ruby
 
 sudo systemctl enable web-${LANG}
