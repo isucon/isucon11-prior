@@ -259,7 +259,7 @@ func (s *Scenario) Load(parent context.Context, step *isucandar.BenchmarkStep) e
 				}
 			}
 		}
-	}, worker.WithInfinityLoop(), worker.WithMaxParallelism(s.Parallelism))
+	}, worker.WithInfinityLoop(), worker.WithMaxParallelism(s.Parallelism*2))
 	if err != nil {
 		return failure.NewError(ErrCritical, err)
 	}
@@ -335,17 +335,21 @@ func (s *Scenario) Validation(parent context.Context, step *isucandar.BenchmarkS
 			step.AddError(err)
 		}
 
-		if sschedule.Users.Count() > int(resp.Reserved) {
+		expectedResevations := sschedule.Users.Count()
+		if expectedResevations > int(resp.Reserved) {
 			step.AddError(failure.NewError(ErrMissmatch, fmt.Errorf("schedule.reserved %d != %d", resp.Reserved, sschedule.Users.Count())))
 		}
 
+		actualReservations := len(resp.Reservations)
 		allowUnknownUsersCount := 0
-		if err := assertEqualInt(sschedule.Users.Count(), len(resp.Reservations), "schedule.reservations.count"); err != nil {
-			step.AddError(err)
-			allowUnknownUsersCount = len(resp.Reservations) - sschedule.Users.Count()
+		if err := assertEqualInt(expectedResevations, actualReservations, "schedule.reservations.count"); err != nil {
+			if expectedResevations > actualReservations {
+				step.AddError(err)
+			}
+			allowUnknownUsersCount = actualReservations - expectedResevations
 		}
 
-		if len(resp.Reservations) > int(sschedule.Capacity) {
+		if actualReservations > int(sschedule.Capacity) {
 			step.AddError(failure.NewError(ErrInvalid, fmt.Errorf("overbooking at %s", sschedule.ID)))
 		}
 

@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"runtime"
 	"runtime/pprof"
 	"sync"
 	"sync/atomic"
@@ -46,7 +47,7 @@ func init() {
 	flag.BoolVar(&exitStatusOnFail, "exit-status", false, "set exit status non-zero when a benchmark result is failing")
 	flag.BoolVar(&noLoad, "no-load", false, "exit on finished prepare")
 	flag.BoolVar(&showVersion, "version", false, "show version and exit 1")
-	flag.IntVar(&parallelism, "parallelism", 20, "parallelism count")
+	flag.IntVar(&parallelism, "parallelism", runtime.GOMAXPROCS(0), "parallelism count")
 	flag.BoolVar(&progress, "progress", false, "show score in progress")
 	flag.BoolVar(&isAdmin, "admin", false, "administrator mode")
 	if DEBUG {
