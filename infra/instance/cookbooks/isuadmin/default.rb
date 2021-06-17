@@ -18,6 +18,12 @@ file '/etc/sudoers.d/isuadmin' do
   mode '440'
 end
 
+directory '/home/isuadmin/.ssh' do
+  owner 'isuadmin'
+  group 'isuadmin'
+  mode '700'
+end
+
 file '/home/isuadmin/.ssh/authorized_keys' do
   owner 'isuadmin'
   group 'isuadmin'
