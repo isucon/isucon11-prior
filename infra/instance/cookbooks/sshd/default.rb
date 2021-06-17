@@ -8,5 +8,5 @@ remote_file '/etc/ssh/sshd_config' do
   owner 'root'
   group 'root'
   mode '644'
-  notifies :restart, 'service[sshd]'
+  notifies :restart, 'service[ssh]'
 end
