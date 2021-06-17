@@ -85,6 +85,9 @@ func (s *Scenario) Load(parent context.Context, step *isucandar.BenchmarkStep) e
 	ctx, cancel := context.WithTimeout(parent, 60*time.Second)
 	defer cancel()
 
+	userTimer, timerCancel := context.WithTimeout(ctx, 45*time.Second)
+	defer timerCancel()
+
 	wg := sync.WaitGroup{}
 	wg.Add(1)
 
@@ -147,9 +150,6 @@ func (s *Scenario) Load(parent context.Context, step *isucandar.BenchmarkStep) e
 		scheduleWorker.Process(ctx)
 		wg.Done()
 	}()
-
-	userTimer, timerCancel := context.WithTimeout(ctx, 50*time.Second)
-	defer timerCancel()
 
 	userWorker, err := worker.NewWorker(func(ctx context.Context, _ int) {
 		select {
@@ -339,8 +339,10 @@ func (s *Scenario) Validation(parent context.Context, step *isucandar.BenchmarkS
 			step.AddError(failure.NewError(ErrMissmatch, fmt.Errorf("schedule.reserved %d != %d", resp.Reserved, sschedule.Users.Count())))
 		}
 
+		allowUnknownUsersCount := 0
 		if err := assertEqualInt(sschedule.Users.Count(), len(resp.Reservations), "schedule.reservations.count"); err != nil {
 			step.AddError(err)
+			allowUnknownUsersCount = len(resp.Reservations) - sschedule.Users.Count()
 		}
 
 		if len(resp.Reservations) > int(sschedule.Capacity) {
@@ -351,7 +353,11 @@ func (s *Scenario) Validation(parent context.Context, step *isucandar.BenchmarkS
 		for _, reservation := range resp.Reservations {
 			suser := sschedule.Users.GetByID(reservation.UserID)
 			if suser == nil {
-				step.AddError(failure.NewError(ErrInvalid, fmt.Errorf("unknown user on reservations: %s", reservation.UserID)))
+				if allowUnknownUsersCount <= 0 {
+					step.AddError(failure.NewError(ErrInvalid, fmt.Errorf("unknown user on reservations: %s", reservation.UserID)))
+				} else {
+					allowUnknownUsersCount--
+				}
 				continue
 			}
 
