@@ -148,9 +148,14 @@ func (s *Scenario) Load(parent context.Context, step *isucandar.BenchmarkStep) e
 		wg.Done()
 	}()
 
+	userTimer, timerCancel := context.WithTimeout(ctx, 50*time.Second)
+	defer timerCancel()
+
 	userWorker, err := worker.NewWorker(func(ctx context.Context, _ int) {
 		select {
 		case <-ctx.Done():
+			return
+		case <-userTimer.Done():
 			return
 		case <-time.After(100 * time.Millisecond):
 		}
