@@ -10,8 +10,8 @@ execute 'update repository' do
   git reset --
   git checkout -- .
   git clean -f
-  git checkout main
   git pull origin
+  git checkout origin/main
   git rev-parse HEAD > REVISION
   EOC
   user 'isuadmin'
