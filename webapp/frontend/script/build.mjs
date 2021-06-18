@@ -29,7 +29,7 @@ const baseOptions = {
   },
   plugins: [
     sassPlugin({
-      implementation: 'node-sass',
+      implementation: 'sass',
     }),
     htmlPlugin({}),
   ],

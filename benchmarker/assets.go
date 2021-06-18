@@ -3,8 +3,8 @@ package main
 
 var (
 	resoucesHash = map[string]string{ 
-		"/esm/index.js": "50d3377b86332d0c16cc51864bc0a723",
-		"/esm/index.js.map": "cdf330e6e49899bc5a42503d43b7dbc2",
+		"/esm/index.js": "23038151055d599701fd15151edfa717",
+		"/esm/index.js.map": "57481809039fa86c6f1d1836efb32091",
 		"/index.html": "fee7db93495361e40c8e766f04ca1051",
 		"/index.js": "6b47d85dad999003e741e4ea5d653276",
 		"/index.js.map": "4491fe31a18849a91943f4cad7949bd0",
