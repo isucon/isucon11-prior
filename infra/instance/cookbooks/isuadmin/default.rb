@@ -36,15 +36,3 @@ remote_file '/home/isuadmin/.ssh/config' do
   group 'isuadmin'
   mode '600'
 end
-
-remote_file '/home/isuadmin/.ssh/deploy' do
-  owner 'isuadmin'
-  group 'isuadmin'
-  mode '600'
-end
-
-remote_file '/home/isuadmin/.ssh/deploy.pub' do
-  owner 'isuadmin'
-  group 'isuadmin'
-  mode '644'
-end
