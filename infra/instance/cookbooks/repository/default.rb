@@ -1,6 +1,6 @@
 node[:isucon11_repository] = '/home/isuadmin/src/isucon11-prior'
 
-execute "git clone --depth 1 github.com:isucon/isucon11-prior.git #{node[:isucon11_repository]}" do
+execute "git clone --depth 1 https://github.com/isucon/isucon11-prior.git #{node[:isucon11_repository]}" do
   user 'isuadmin'
   not_if "test -d #{node[:isucon11_repository]}"
 end
