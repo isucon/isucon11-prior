@@ -301,6 +301,10 @@ func (s *Scenario) Validation(parent context.Context, step *isucandar.BenchmarkS
 	}
 
 	scheduleWorker, err := worker.NewWorker(func(ctx context.Context, i int) {
+		if i < 0 {
+			return
+		}
+
 		schedule := schedules[i]
 
 		sschedule := s.Schedules.GetByID(schedule.ID)
@@ -382,7 +386,10 @@ func (s *Scenario) Validation(parent context.Context, step *isucandar.BenchmarkS
 	if err != nil {
 		return err
 	}
-	scheduleWorker.Process(ctx)
+
+	if len(schedules) > 0 {
+		scheduleWorker.Process(ctx)
+	}
 
 	return nil
 }
