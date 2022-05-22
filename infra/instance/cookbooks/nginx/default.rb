@@ -32,19 +32,19 @@ directory '/usr/local/ssl' do
   mode '0755'
 end
 
-remote_file '/usr/local/ssl/fullchain.pem' do
-  owner 'root'
-  group 'root'
-  mode '0644'
-  notifies :restart, 'service[nginx]'
-end
-
-remote_file '/usr/local/ssl/privkey.pem' do
-  owner 'root'
-  group 'root'
-  mode '0644'
-  notifies :restart, 'service[nginx]'
-end
+# remote_file '/usr/local/ssl/fullchain.pem' do
+#   owner 'root'
+#   group 'root'
+#   mode '0644'
+#   notifies :restart, 'service[nginx]'
+# end
+#
+# remote_file '/usr/local/ssl/privkey.pem' do
+#   owner 'root'
+#   group 'root'
+#   mode '0644'
+#   notifies :restart, 'service[nginx]'
+# end
 
 remote_file '/etc/nginx/sites-available/default' do
   owner 'root'
