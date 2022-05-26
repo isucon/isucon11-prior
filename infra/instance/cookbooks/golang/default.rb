@@ -1,6 +1,6 @@
 include_cookbook 'xbuild'
 
-version = '1.16.5'
+version = '1.18.2'
 
 execute "rm -rf /home/isucon/local/golang; /opt/xbuild/go-install #{version} /home/isucon/local/golang" do
   user 'isucon'

@@ -44,7 +44,7 @@ func (s *Scenario) Prepare(ctx context.Context, step *isucandar.BenchmarkStep) e
 	/*
 		TODO: 負荷走行前の初期化部分をここに書く(ex: GET /initialize とか)
 	*/
-	initializer, err := agent.NewAgent(agent.WithBaseURL(s.BaseURL))
+	initializer, err := agent.NewAgent(agent.WithBaseURL(s.BaseURL), agent.WithDefaultTransport())
 	if err != nil {
 		return failure.NewError(ErrCritical, err)
 	}
@@ -395,7 +395,7 @@ func (s *Scenario) Validation(parent context.Context, step *isucandar.BenchmarkS
 }
 
 func (s *Scenario) NewUser() (*User, error) {
-	a, err := agent.NewAgent(agent.WithBaseURL(s.BaseURL))
+	a, err := agent.NewAgent(agent.WithBaseURL(s.BaseURL), agent.WithCloneTransport(agent.DefaultTransport))
 	if err != nil {
 		return nil, failure.NewError(ErrCritical, err)
 	}
