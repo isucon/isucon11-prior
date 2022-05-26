@@ -1,4 +1,5 @@
 require 'sinatra/json'
+require 'active_support'
 require 'active_support/json'
 require 'active_support/time'
 require_relative 'db'
